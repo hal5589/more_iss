@@ -1,6 +1,5 @@
 package nekotori_haru.more_iss;
 
-import nekotori_haru.more_iss.registry.ModSpells;
 
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
@@ -75,8 +74,6 @@ public class More_iss {
     public More_iss() {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
 
-        ModSpells.SPELLS.register(modEventBus);
-
         modEventBus.addListener(this::commonSetup);
 
         BLOCKS.register(modEventBus);
@@ -88,7 +85,6 @@ public class More_iss {
         modEventBus.addListener(this::addCreative);
 
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.SPEC);
-        ModSpells.register(modEventBus);
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
