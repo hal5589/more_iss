@@ -22,21 +22,21 @@ import java.util.Optional;
 public class BarrageSpell extends AbstractSpell {
 
     private final ResourceLocation spellId =
-            ResourceLocation.fromNamespaceAndPath("more_iss", "barrage");
+            ResourceLocation.fromNamespaceAndPath("more_iss", "barrage_spell");
 
     // 本家と同じ DefaultConfig の書き方
     private final DefaultConfig defaultConfig = new DefaultConfig()
-            .setMinRarity(SpellRarity.COMMON)
-            .setSchoolResource(SchoolRegistry.FIRE_RESOURCE)
+            .setMinRarity(SpellRarity.EPIC)
+            .setSchoolResource(SchoolRegistry.ENDER_RESOURCE)
             .setMaxLevel(5)
             .setCooldownSeconds(8)
             .build();
 
     public BarrageSpell() {
-        this.baseSpellPower = 12;
-        this.spellPowerPerLevel = 1;
-        this.baseManaCost = 250;
-        this.manaCostPerLevel = 20;
+        this.baseSpellPower = 25;
+        this.spellPowerPerLevel = 5;
+        this.baseManaCost = 300;
+        this.manaCostPerLevel = 50;
         this.castTime = 1;
     }
 
@@ -61,7 +61,8 @@ public class BarrageSpell extends AbstractSpell {
                 Component.translatable("ui.irons_spellbooks.damage",
                         Utils.stringTruncation(getDamage(spellLevel, caster), 2)),
                 Component.literal("Projectiles: " + getBulletCount(spellLevel)),
-                Component.literal("Spread: " + (int) SPREAD_DEG + "°")
+                // 角度ではなく、長方形のサイズを表示するように変更
+                Component.literal(String.format("Area: %.1fx%.1f", RECT_WIDTH, RECT_HEIGHT))
         );
     }
 
@@ -70,13 +71,16 @@ public class BarrageSpell extends AbstractSpell {
     // -------------------------------------------------------
 
     /** Lv1〜5の弾数 */
-    private static final int[] BULLET_COUNT = { 10, 15, 20, 25, 30 };
+    private static final int[] BULLET_COUNT = { 30, 37, 45, 53, 60 };
 
-    /** 水平拡散角度（度）*/
-    private static final float SPREAD_DEG = 20f;
+    /** 長方形の横幅（ブロック数） */
+    private static final float RECT_WIDTH = 15.0f;
 
-    /** 縦方向の揺らぎ（度）。0 にすると水平一列 */
-    private static final float V_SPREAD_DEG = 3f;
+    /** 長方形の縦幅（ブロック数） */
+    private static final float RECT_HEIGHT = 5.0f;
+
+    /** 背後へ下げる距離（ブロック数） */
+    private static final float BACK_DISTANCE = 7f;
 
     // -------------------------------------------------------
     // キャスト処理
@@ -86,32 +90,43 @@ public class BarrageSpell extends AbstractSpell {
     public void onCast(Level world, int spellLevel, LivingEntity entity,
                        CastSource castSource, MagicData playerMagicData) {
 
-        int   count  = getBulletCount(spellLevel);
+        int count = getBulletCount(spellLevel);
         float damage = getDamage(spellLevel, entity);
-        Vec3  look   = entity.getLookAngle().normalize();
 
-        // 発射起点：本家に合わせて目線の高さから
-        Vec3 origin = entity.position().add(0,
-                entity.getEyeHeight() - new MagicMissileProjectile(world, entity)
-                        .getBoundingBox().getYsize() * .5f, 0);
+        // 1. 方向ベクトルの計算
+        Vec3 look = entity.getLookAngle().normalize();
+        Vec3 right = look.cross(new Vec3(0, 1, 0)).normalize();
+        if (right.lengthSqr() < 0.01) right = look.cross(new Vec3(1, 0, 0)).normalize();
+        Vec3 up = right.cross(look).normalize();
 
-        if (count == 1) {
-            spawnMissile(world, entity, origin, look, damage);
-        } else {
-            float half = SPREAD_DEG / 2f;
-            float step = SPREAD_DEG / (count - 1);
+        // 2. 発射基準点（後ろ BACK_DISTANCE + 上 1.0）
+        Vec3 baseOrigin = entity.getEyePosition()
+                .subtract(look.scale(BACK_DISTANCE))
+                .add(0, 5.0, 0);
 
-            for (int i = 0; i < count; i++) {
-                float yaw   = -half + step * i;
-                float pitch = V_SPREAD_DEG > 0
-                        ? (float)(Math.random() * V_SPREAD_DEG * 2 - V_SPREAD_DEG)
-                        : 0f;
-                Vec3 dir = rotateDirection(look, yaw, pitch);
-                spawnMissile(world, entity, origin, dir, damage);
-            }
+        // 3. 長方形グリッドの計算
+        int columns = (int) Math.ceil(Math.sqrt(count * (RECT_WIDTH / RECT_HEIGHT)));
+        int rows = (int) Math.ceil((double) count / columns);
+        float xStep = (columns > 1) ? RECT_WIDTH / (columns - 1) : 0;
+        float yStep = (rows > 1) ? RECT_HEIGHT / (rows - 1) : 0;
+
+        for (int i = 0; i < count; i++) {
+            int row = i / columns;
+            int col = i % columns;
+
+            float xOff = (col * xStep) - (RECT_WIDTH / 2f);
+            float yOff = (row * yStep) - (RECT_HEIGHT / 2f);
+
+            // 各弾の初期位置：基準点から横(right)と縦(up)にずらす
+            Vec3 bulletOrigin = baseOrigin.add(right.scale(xOff)).add(up.scale(yOff));
+
+            // 4. 弾道の決定
+            // 収束させず、プレイヤーの向いている方向 (look) へ完全に平行に飛ばす
+            Vec3 finalDir = look;
+
+            spawnMissile(world, entity, bulletOrigin, finalDir, damage);
         }
 
-        // 本家と同じく super を最後に呼ぶ
         super.onCast(world, spellLevel, entity, castSource, playerMagicData);
     }
 

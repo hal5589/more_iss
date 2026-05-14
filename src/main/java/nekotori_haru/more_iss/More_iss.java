@@ -1,7 +1,9 @@
 package nekotori_haru.more_iss;
 
-
 import com.mojang.logging.LogUtils;
+import io.redspace.ironsspellbooks.api.registry.SpellRegistry;
+import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
+import nekotori_haru.more_iss.spell.BarrageSpell;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.food.FoodProperties;
@@ -36,40 +38,28 @@ public class More_iss {
     public static final String MODID = "more_iss";
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    public static final DeferredRegister<Block> BLOCKS =
-            DeferredRegister.create(ForgeRegistries.BLOCKS, MODID);
+    // --- 既存のレジストリ ---
+    public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(ForgeRegistries.BLOCKS, MODID);
+    public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, MODID);
+    public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
 
-    public static final DeferredRegister<Item> ITEMS =
-            DeferredRegister.create(ForgeRegistries.ITEMS, MODID);
+    // --- 【追加】ISSの呪文用レジストリ ---
+    public static final DeferredRegister<AbstractSpell> SPELLS = DeferredRegister.create(SpellRegistry.SPELL_REGISTRY_KEY, MODID);
 
-    public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS =
-            DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
+    // --- 既存のオブジェクト ---
+    public static final RegistryObject<Block> EXAMPLE_BLOCK = BLOCKS.register("example_block", () -> new Block(BlockBehaviour.Properties.of().mapColor(MapColor.STONE)));
+    public static final RegistryObject<Item> EXAMPLE_BLOCK_ITEM = ITEMS.register("example_block", () -> new BlockItem(EXAMPLE_BLOCK.get(), new Item.Properties()));
+    public static final RegistryObject<Item> EXAMPLE_ITEM = ITEMS.register("example_item", () -> new Item(new Item.Properties().food(new FoodProperties.Builder().alwaysEat().nutrition(1).saturationMod(2f).build())));
 
-    public static final RegistryObject<Block> EXAMPLE_BLOCK =
-            BLOCKS.register("example_block",
-                    () -> new Block(BlockBehaviour.Properties.of().mapColor(MapColor.STONE)));
+    // --- 【追加】BarrageSpellの登録 ---
+    public static final RegistryObject<AbstractSpell> BARRAGE_SPELL = SPELLS.register("barrage_spell", BarrageSpell::new);
 
-    public static final RegistryObject<Item> EXAMPLE_BLOCK_ITEM =
-            ITEMS.register("example_block",
-                    () -> new BlockItem(EXAMPLE_BLOCK.get(), new Item.Properties()));
-
-    public static final RegistryObject<Item> EXAMPLE_ITEM =
-            ITEMS.register("example_item",
-                    () -> new Item(new Item.Properties()
-                            .food(new FoodProperties.Builder()
-                                    .alwaysEat()
-                                    .nutrition(1)
-                                    .saturationMod(2f)
-                                    .build())));
-
-    public static final RegistryObject<CreativeModeTab> EXAMPLE_TAB =
-            CREATIVE_MODE_TABS.register("example_tab",
-                    () -> CreativeModeTab.builder()
-                            .withTabsBefore(CreativeModeTabs.COMBAT)
-                            .icon(() -> EXAMPLE_ITEM.get().getDefaultInstance())
-                            .displayItems((parameters, output) -> {
-                                output.accept(EXAMPLE_ITEM.get());
-                            }).build());
+    public static final RegistryObject<CreativeModeTab> EXAMPLE_TAB = CREATIVE_MODE_TABS.register("example_tab", () -> CreativeModeTab.builder()
+            .withTabsBefore(CreativeModeTabs.COMBAT)
+            .icon(() -> EXAMPLE_ITEM.get().getDefaultInstance())
+            .displayItems((parameters, output) -> {
+                output.accept(EXAMPLE_ITEM.get());
+            }).build());
 
     public More_iss() {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
@@ -80,10 +70,11 @@ public class More_iss {
         ITEMS.register(modEventBus);
         CREATIVE_MODE_TABS.register(modEventBus);
 
+        // --- 【追加】呪文レジストリをイベントバスに登録 ---
+        SPELLS.register(modEventBus);
+
         MinecraftForge.EVENT_BUS.register(this);
-
         modEventBus.addListener(this::addCreative);
-
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.SPEC);
     }
 
@@ -104,7 +95,6 @@ public class More_iss {
 
     @Mod.EventBusSubscriber(modid = MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static class ClientModEvents {
-
         @SubscribeEvent
         public static void onClientSetup(FMLClientSetupEvent event) {
             LOGGER.info("HELLO FROM CLIENT SETUP");
