@@ -3,16 +3,18 @@ package nekotori_haru.more_iss;
 import com.mojang.logging.LogUtils;
 import io.redspace.ironsspellbooks.api.registry.SpellRegistry;
 import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
+import nekotori_haru.more_iss.entity.ThunderboltFlashProjectile; // 追加
 import nekotori_haru.more_iss.spell.EnderShootingStar;
-import net.minecraft.client.Minecraft;
+import nekotori_haru.more_iss.spell.ThunderboltFlash; // 追加
 import net.minecraft.core.registries.Registries;
+import net.minecraft.world.entity.EntityType; // 追加
+import net.minecraft.world.entity.MobCategory; // 追加
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraftforge.api.distmarker.Dist;
@@ -38,21 +40,31 @@ public class More_iss {
     public static final String MODID = "more_iss";
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    // --- レジストリ定義 (各1回ずつ定義) ---
+    // --- レジストリ定義 ---
     public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(ForgeRegistries.BLOCKS, MODID);
     public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, MODID);
     public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
-
-    // ISSの呪文用レジストリ (1つにまとめました)
     public static final DeferredRegister<AbstractSpell> SPELLS = DeferredRegister.create(SpellRegistry.SPELL_REGISTRY_KEY, MODID);
+
+    // 【追加】エンティティ用のレジストリ
+    public static final DeferredRegister<EntityType<?>> ENTITIES = DeferredRegister.create(ForgeRegistries.ENTITY_TYPES, MODID);
 
     // --- オブジェクト登録 ---
     public static final RegistryObject<Block> EXAMPLE_BLOCK = BLOCKS.register("example_block", () -> new Block(BlockBehaviour.Properties.of().mapColor(MapColor.STONE)));
     public static final RegistryObject<Item> EXAMPLE_BLOCK_ITEM = ITEMS.register("example_block", () -> new BlockItem(EXAMPLE_BLOCK.get(), new Item.Properties()));
     public static final RegistryObject<Item> EXAMPLE_ITEM = ITEMS.register("example_item", () -> new Item(new Item.Properties().food(new FoodProperties.Builder().alwaysEat().nutrition(1).saturationMod(2f).build())));
 
-    // エンダー・シューティングスターの登録
+    // 魔法の登録
     public static final RegistryObject<AbstractSpell> ENDER_SHOOTING_STAR = SPELLS.register("ender_shooting_star", EnderShootingStar::new);
+    // 【追加】雷閃の登録
+    public static final RegistryObject<AbstractSpell> RAISEN = SPELLS.register("raisen", ThunderboltFlash::new);
+
+    // 【追加】雷閃の弾丸（エンティティ）の登録
+    public static final RegistryObject<EntityType<ThunderboltFlashProjectile>> THUNDERBOLT_FLASH_PROJECTILE = ENTITIES.register("thunderbolt_flash_projectile",
+            () -> EntityType.Builder.<ThunderboltFlashProjectile>of(ThunderboltFlashProjectile::new, MobCategory.MISC)
+                    .sized(0.5F, 0.5F)
+                    .clientTrackingRange(64)
+                    .build("thunderbolt_flash_projectile"));
 
     public static final RegistryObject<CreativeModeTab> EXAMPLE_TAB = CREATIVE_MODE_TABS.register("example_tab", () -> CreativeModeTab.builder()
             .withTabsBefore(CreativeModeTabs.COMBAT)
@@ -66,11 +78,12 @@ public class More_iss {
 
         modEventBus.addListener(this::commonSetup);
 
-        // レジストリをイベントバスに登録
         BLOCKS.register(modEventBus);
         ITEMS.register(modEventBus);
         CREATIVE_MODE_TABS.register(modEventBus);
-        SPELLS.register(modEventBus); // 呪文も忘れずに
+        SPELLS.register(modEventBus);
+        // 【追加】エンティティレジストリをイベントバスに登録
+        ENTITIES.register(modEventBus);
 
         MinecraftForge.EVENT_BUS.register(this);
         modEventBus.addListener(this::addCreative);
@@ -84,6 +97,8 @@ public class More_iss {
     private void addCreative(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == CreativeModeTabs.BUILDING_BLOCKS)
             event.accept(EXAMPLE_BLOCK_ITEM);
+
+        // 【任意】戦闘タブなどにスクロールを直接追加したい場合はここに追記
     }
 
     @SubscribeEvent
