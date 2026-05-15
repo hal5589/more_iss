@@ -19,10 +19,10 @@ import java.util.List;
 import java.util.Optional;
 
 @AutoSpellConfig
-public class BarrageSpell extends AbstractSpell {
+public class EnderShootingStar extends AbstractSpell {
 
     private final ResourceLocation spellId =
-            ResourceLocation.fromNamespaceAndPath("more_iss", "barrage_spell");
+            ResourceLocation.fromNamespaceAndPath("more_iss", "ender_shooting_star");
 
     // --- 弾幕のパラメータ ---
     private static final float RECT_WIDTH = 10.0f;     // 横の広がり
@@ -32,18 +32,18 @@ public class BarrageSpell extends AbstractSpell {
     private static final int[] BULLET_COUNT = { 10, 15, 20, 25, 30 }; // レベルごとの弾数
 
     private final DefaultConfig defaultConfig = new DefaultConfig()
-            .setMinRarity(SpellRarity.COMMON)
-            .setSchoolResource(SchoolRegistry.FIRE_RESOURCE)
+            .setMinRarity(SpellRarity.EPIC)
+            .setSchoolResource(SchoolRegistry.ENDER_RESOURCE)
             .setMaxLevel(5)
-            .setCooldownSeconds(8)
+            .setCooldownSeconds(20)
             .build();
 
-    public BarrageSpell() {
-        this.baseSpellPower = 12;
-        this.spellPowerPerLevel = 1;
+    public EnderShootingStar() {
+        this.baseSpellPower = 6;
+        this.spellPowerPerLevel = 4;
         this.baseManaCost = 250;
-        this.manaCostPerLevel = 20;
-        this.castTime = 1;
+        this.manaCostPerLevel = 30;
+        this.castTime = 20;
     }
 
     @Override
@@ -58,7 +58,7 @@ public class BarrageSpell extends AbstractSpell {
 
     @Override
     public CastType getCastType() {
-        return CastType.INSTANT;
+        return CastType.LONG;
     }
 
     @Override

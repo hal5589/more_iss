@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "base_mana_cost": 250,
+  "mana_cost_per_level": 20,
+  "base_spell_power": 12,
+  "spell_power_per_level": 1,
+  "cast_time": 1,
+  "cooldown_seconds": 8.0,
+  "cast_type": "instant",
+  "rarity": "common",
+  "school": "irons_spellbooks:ender",
+  "max_level": 5,
+  "allow_crafting": true
+}

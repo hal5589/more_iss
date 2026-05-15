@@ -128,7 +128,7 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 repositories {
     mavenCentral()
     maven { url = "https://maven.minecraftforge.net" }
-    maven { url = "https://www.cursemaven.com" }
+    maven { url = "https://cursemaven.com" }
 }
 
 dependencies {
@@ -137,6 +137,7 @@ dependencies {
     implementation fg.deobf("curse.maven:irons-spells-n-spellbooks-309927:6418456")
     implementation fg.deobf("curse.maven:irons-spells-n-spellbooks-388172:7553267")
     implementation fg.deobf("curse.maven:irons-spells-n-spellbooks-658587:4587214")
+    implementation fg.deobf("curse.maven:irons-spells-n-spellbooks-557076:4643128")
 }
 
 dependencies {
