@@ -1,0 +1,18 @@
+{
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        {
+          "type": "forge:false"
+        }
+      ],
+      "recipe": {
+        "type": "irons_spellbooks:scroll_forge",
+        "result": {
+          "item": "minecraft:air"
+        }
+      }
+    }
+  ]
+}
