@@ -1,8 +1,10 @@
 package nekotori_haru.more_iss.recipe;
 
-import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.core.RegistryAccess;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.TagParser;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.GsonHelper;
@@ -27,40 +29,47 @@ public class AnvilCraftRecipe implements Recipe<Container> {
     };
 
     private final ResourceLocation id;
-    private final String baseSpell;
-    private final int baseLevel;
-    private final String additionalSpell;
-    private final int additionalLevel;
-    private final String outputSpell;
-    private final int outputLevel;
+    private final ItemStack baseIngredient;
+    private final ItemStack modifierIngredient;
+    private final ItemStack outputResult;
 
-    public AnvilCraftRecipe(ResourceLocation id, String baseSpell, int baseLevel, String additionalSpell, int additionalLevel, String outputSpell, int outputLevel) {
+    public AnvilCraftRecipe(ResourceLocation id, ItemStack baseIngredient, ItemStack modifierIngredient, ItemStack outputResult) {
         this.id = id;
-        this.baseSpell = baseSpell;
-        this.baseLevel = baseLevel;
-        this.additionalSpell = additionalSpell;
-        this.additionalLevel = additionalLevel;
-        this.outputSpell = outputSpell;
-        this.outputLevel = outputLevel;
+        this.baseIngredient = baseIngredient;
+        this.modifierIngredient = modifierIngredient;
+        this.outputResult = outputResult;
     }
 
     /**
-     * IDとレベルが両方とも満たされているかチェックする（順不同対応）
+     * 金床の2つのスロットのアイテムが、レシピの条件（IDおよびNBT）を満たしているかチェック
      */
-    public boolean matchesSpells(String id1, int lvl1, String id2, int lvl2) {
-        // パターンA: 1つ目のスロットが base_spell、2つ目のスロットが additional_spell
-        boolean patternA = this.baseSpell.equals(id1) && lvl1 >= this.baseLevel &&
-                this.additionalSpell.equals(id2) && lvl2 >= this.additionalLevel;
-
-        // パターンB: 2つ目のスロットが base_spell、1つ目のスロットが additional_spell
-        boolean patternB = this.baseSpell.equals(id2) && lvl2 >= this.baseLevel &&
-                this.additionalSpell.equals(id1) && lvl1 >= this.additionalLevel;
-
-        return patternA || patternB;
+    public boolean matchesItems(ItemStack slot1, ItemStack slot2) {
+        return (isMatch(this.baseIngredient, slot1) && isMatch(this.modifierIngredient, slot2)) ||
+                (isMatch(this.baseIngredient, slot2) && isMatch(this.modifierIngredient, slot1));
     }
 
-    public String getOutputSpellId() { return this.outputSpell; }
-    public int getOutputLevel() { return this.outputLevel; }
+    private boolean isMatch(ItemStack recipeStack, ItemStack inputStack) {
+        if (recipeStack.getItem() != inputStack.getItem()) return false;
+        // レシピ側にNBT指定がある場合のみ、入力アイテムのNBTと一致するか（部分一致/包含関係）を検証する
+        if (recipeStack.hasTag()) {
+            if (!inputStack.hasTag()) return false;
+            CompoundTag recipeTag = recipeStack.getTag();
+            CompoundTag inputTag = inputStack.getTag();
+            if (recipeTag != null && inputTag != null) {
+                // 入力されたNBTがレシピのNBTをすべて含んでいるかチェック
+                for (String key : recipeTag.getAllKeys()) {
+                    if (!recipeTag.get(key).equals(inputTag.get(key))) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+    public ItemStack getOutputCopy() {
+        return this.outputResult.copy();
+    }
 
     @Override public ResourceLocation getId() { return this.id; }
     @Override public RecipeSerializer<?> getSerializer() { return SERIALIZER.get(); }
@@ -71,52 +80,45 @@ public class AnvilCraftRecipe implements Recipe<Container> {
     @Override public boolean canCraftInDimensions(int pWidth, int pHeight) { return true; }
     @Override public ItemStack getResultItem(RegistryAccess pRegistryAccess) { return ItemStack.EMPTY; }
 
-    // --- Serializer ---
+    // --- Serializer (ShapedRecipeなどのバニラ処理を参考にした安全なNBTパース) ---
     public static class Serializer implements RecipeSerializer<AnvilCraftRecipe> {
 
         @Override
         public AnvilCraftRecipe fromJson(ResourceLocation recipeId, JsonObject json) {
-            // base_spell の解析
-            JsonObject baseObj = GsonHelper.getAsJsonObject(json, "base_spell");
-            String baseSpell = GsonHelper.getAsString(baseObj, "spell");
-            int baseLevel = GsonHelper.getAsInt(baseObj, "level", 1);
+            ItemStack base = parseItemStack(GsonHelper.getAsJsonObject(json, "base_item"));
+            ItemStack modifier = parseItemStack(GsonHelper.getAsJsonObject(json, "modifier_item"));
+            ItemStack output = parseItemStack(GsonHelper.getAsJsonObject(json, "output_item"));
+            return new AnvilCraftRecipe(recipeId, base, modifier, output);
+        }
 
-            // additional_spells 配列の解析
-            JsonArray additionalArray = GsonHelper.getAsJsonArray(json, "additional_spells");
-            String additionalSpell = "";
-            int additionalLevel = 1;
-            if (additionalArray.size() > 0) {
-                JsonObject firstAdditional = additionalArray.get(0).getAsJsonObject();
-                additionalSpell = GsonHelper.getAsString(firstAdditional, "spell");
-                additionalLevel = GsonHelper.getAsInt(firstAdditional, "level", 1);
+        private ItemStack parseItemStack(JsonObject obj) {
+            ResourceLocation itemId = new ResourceLocation(GsonHelper.getAsString(obj, "item"));
+            net.minecraft.world.item.Item item = ForgeRegistries.ITEMS.getValue(itemId);
+            int count = GsonHelper.getAsInt(obj, "count", 1);
+            ItemStack stack = new ItemStack(item, count);
+
+            if (obj.has("nbt")) {
+                try {
+                    // JSON内のNBT構造（オブジェクト/文字列問わず）をCompoundTagに直接変換してアイテムに付与
+                    CompoundTag nbt = TagParser.parseTag(obj.get("nbt").toString());
+                    stack.setTag(nbt);
+                } catch (CommandSyntaxException e) {
+                    throw new com.google.gson.JsonSyntaxException("Invalid NBT entry: " + e.getMessage());
+                }
             }
-
-            // output_spell の解析
-            JsonObject outputObj = GsonHelper.getAsJsonObject(json, "output_spell");
-            String outputSpell = GsonHelper.getAsString(outputObj, "spell");
-            int outputLevel = GsonHelper.getAsInt(outputObj, "level", 1);
-
-            return new AnvilCraftRecipe(recipeId, baseSpell, baseLevel, additionalSpell, additionalLevel, outputSpell, outputLevel);
+            return stack;
         }
 
         @Override
         public AnvilCraftRecipe fromNetwork(ResourceLocation recipeId, FriendlyByteBuf buffer) {
-            return new AnvilCraftRecipe(
-                    recipeId,
-                    buffer.readUtf(), buffer.readVarInt(),
-                    buffer.readUtf(), buffer.readVarInt(),
-                    buffer.readUtf(), buffer.readVarInt()
-            );
+            return new AnvilCraftRecipe(recipeId, buffer.readItem(), buffer.readItem(), buffer.readItem());
         }
 
         @Override
         public void toNetwork(FriendlyByteBuf buffer, AnvilCraftRecipe recipe) {
-            buffer.writeUtf(recipe.baseSpell);
-            buffer.writeVarInt(recipe.baseLevel);
-            buffer.writeUtf(recipe.additionalSpell);
-            buffer.writeVarInt(recipe.additionalLevel);
-            buffer.writeUtf(recipe.outputSpell);
-            buffer.writeVarInt(recipe.outputLevel);
+            buffer.writeItem(recipe.baseIngredient);
+            buffer.writeItem(recipe.modifierIngredient);
+            buffer.writeItem(recipe.outputResult);
         }
     }
 }

@@ -1,17 +1,47 @@
 {
-  "base_spell": {
-    "spell": "irons_spellbooks:electrify",
-    "level": 3
-  },
-  "additional_spells": [
-    {
-      "spell": "irons_spellbooks:heartstop",
-      "level": 5
+  "type": "more_iss:anvil_craft",
+  "base_item": {
+    "item": "irons_spellbooks:scroll",
+    "nbt": {
+      "ISpellContainer": {
+        "spells": [
+          {
+            "id": "irons_spellbooks:electrify",
+            "level": 3
+          }
+        ]
+      }
     }
-  ],
-  "output_spell": {
-    "spell": "more_iss:overburst_blood",
-    "level": 1
   },
-  "experience_cost": 30
+  "modifier_item": {
+    "item": "irons_spellbooks:scroll",
+    "nbt": {
+      "ISpellContainer": {
+        "spells": [
+          {
+            "id": "irons_spellbooks:heartstop",
+            "level": 5
+          }
+        ]
+      }
+    }
+  },
+  "output_item": {
+    "item": "irons_spellbooks:scroll",
+    "count": 1,
+    "nbt": {
+      "ISpellContainer": {
+        "spells": [
+          {
+            "id": "more_iss:overburst_blood",
+            "level": 1,
+            "locked": false
+          }
+        ],
+        "must_holds": [],
+        "spell_slots": 1,
+        "active_slot_index": 0
+      }
+    }
+  }
 }
