@@ -6,6 +6,7 @@ import net.minecraft.world.inventory.ResultContainer; // ResultContainerをイ�
 import org.spongepowered.asm.mixin.Dynamic;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
+import net.minecraft.world.entity.player.Player;
 
 @Mixin(ItemCombinerMenu.class)
 public interface ItemCombinerMenuAccessor {
@@ -14,4 +15,7 @@ public interface ItemCombinerMenuAccessor {
 
     @Accessor("resultSlots")
     ResultContainer getResultSlots();
+
+    @Accessor("player")
+    Player getPlayer();
 }
