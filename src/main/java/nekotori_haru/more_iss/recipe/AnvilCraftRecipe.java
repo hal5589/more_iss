@@ -1,7 +1,8 @@
 package nekotori_haru.more_iss.recipe;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import net.minecraft.core.RegistryAccess; // ← 解決できないエラーの対策
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.GsonHelper;
@@ -26,55 +27,96 @@ public class AnvilCraftRecipe implements Recipe<Container> {
     };
 
     private final ResourceLocation id;
-    private final String inputId1;
-    private final String inputId2;
-    private final String outputSpellId;
+    private final String baseSpell;
+    private final int baseLevel;
+    private final String additionalSpell;
+    private final int additionalLevel;
+    private final String outputSpell;
+    private final int outputLevel;
 
-    public AnvilCraftRecipe(ResourceLocation id, String inputId1, String inputId2, String outputSpellId) {
+    public AnvilCraftRecipe(ResourceLocation id, String baseSpell, int baseLevel, String additionalSpell, int additionalLevel, String outputSpell, int outputLevel) {
         this.id = id;
-        this.inputId1 = inputId1;
-        this.inputId2 = inputId2;
-        this.outputSpellId = outputSpellId;
+        this.baseSpell = baseSpell;
+        this.baseLevel = baseLevel;
+        this.additionalSpell = additionalSpell;
+        this.additionalLevel = additionalLevel;
+        this.outputSpell = outputSpell;
+        this.outputLevel = outputLevel;
     }
 
-    public boolean matchesSpells(String id1, String id2) {
-        return (this.inputId1.equals(id1) && this.inputId2.equals(id2)) ||
-                (this.inputId1.equals(id2) && this.inputId2.equals(id1));
+    /**
+     * IDとレベルが両方とも満たされているかチェックする（順不同対応）
+     */
+    public boolean matchesSpells(String id1, int lvl1, String id2, int lvl2) {
+        // パターンA: 1つ目のスロットが base_spell、2つ目のスロットが additional_spell
+        boolean patternA = this.baseSpell.equals(id1) && lvl1 >= this.baseLevel &&
+                this.additionalSpell.equals(id2) && lvl2 >= this.additionalLevel;
+
+        // パターンB: 2つ目のスロットが base_spell、1つ目のスロットが additional_spell
+        boolean patternB = this.baseSpell.equals(id2) && lvl2 >= this.baseLevel &&
+                this.additionalSpell.equals(id1) && lvl1 >= this.additionalLevel;
+
+        return patternA || patternB;
     }
 
-    public String getOutputSpellId() { return this.outputSpellId; }
+    public String getOutputSpellId() { return this.outputSpell; }
+    public int getOutputLevel() { return this.outputLevel; }
+
     @Override public ResourceLocation getId() { return this.id; }
     @Override public RecipeSerializer<?> getSerializer() { return SERIALIZER.get(); }
     @Override public RecipeType<?> getType() { return TYPE; }
 
-    // 1.20.1の正規メソッド名・引数名に完全修正
     @Override public boolean matches(Container pContainer, Level pLevel) { return false; }
     @Override public ItemStack assemble(Container pContainer, RegistryAccess pRegistryAccess) { return ItemStack.EMPTY; }
     @Override public boolean canCraftInDimensions(int pWidth, int pHeight) { return true; }
     @Override public ItemStack getResultItem(RegistryAccess pRegistryAccess) { return ItemStack.EMPTY; }
 
-    // --- Serializer (1.20.1仕様) ---
+    // --- Serializer ---
     public static class Serializer implements RecipeSerializer<AnvilCraftRecipe> {
 
-        // 修正：メソッド名を「pNode」から「fromJson」へ変更
         @Override
         public AnvilCraftRecipe fromJson(ResourceLocation recipeId, JsonObject json) {
-            String input1 = GsonHelper.getAsString(json, "input_spell_1");
-            String input2 = GsonHelper.getAsString(json, "input_spell_2");
-            String output = GsonHelper.getAsString(json, "output_spell");
-            return new AnvilCraftRecipe(recipeId, input1, input2, output);
+            // base_spell の解析
+            JsonObject baseObj = GsonHelper.getAsJsonObject(json, "base_spell");
+            String baseSpell = GsonHelper.getAsString(baseObj, "spell");
+            int baseLevel = GsonHelper.getAsInt(baseObj, "level", 1);
+
+            // additional_spells 配列の解析
+            JsonArray additionalArray = GsonHelper.getAsJsonArray(json, "additional_spells");
+            String additionalSpell = "";
+            int additionalLevel = 1;
+            if (additionalArray.size() > 0) {
+                JsonObject firstAdditional = additionalArray.get(0).getAsJsonObject();
+                additionalSpell = GsonHelper.getAsString(firstAdditional, "spell");
+                additionalLevel = GsonHelper.getAsInt(firstAdditional, "level", 1);
+            }
+
+            // output_spell の解析
+            JsonObject outputObj = GsonHelper.getAsJsonObject(json, "output_spell");
+            String outputSpell = GsonHelper.getAsString(outputObj, "spell");
+            int outputLevel = GsonHelper.getAsInt(outputObj, "level", 1);
+
+            return new AnvilCraftRecipe(recipeId, baseSpell, baseLevel, additionalSpell, additionalLevel, outputSpell, outputLevel);
         }
 
         @Override
         public AnvilCraftRecipe fromNetwork(ResourceLocation recipeId, FriendlyByteBuf buffer) {
-            return new AnvilCraftRecipe(recipeId, buffer.readUtf(), buffer.readUtf(), buffer.readUtf());
+            return new AnvilCraftRecipe(
+                    recipeId,
+                    buffer.readUtf(), buffer.readVarInt(),
+                    buffer.readUtf(), buffer.readVarInt(),
+                    buffer.readUtf(), buffer.readVarInt()
+            );
         }
 
         @Override
         public void toNetwork(FriendlyByteBuf buffer, AnvilCraftRecipe recipe) {
-            buffer.writeUtf(recipe.inputId1);
-            buffer.writeUtf(recipe.inputId2);
-            buffer.writeUtf(recipe.outputSpellId);
+            buffer.writeUtf(recipe.baseSpell);
+            buffer.writeVarInt(recipe.baseLevel);
+            buffer.writeUtf(recipe.additionalSpell);
+            buffer.writeVarInt(recipe.additionalLevel);
+            buffer.writeUtf(recipe.outputSpell);
+            buffer.writeVarInt(recipe.outputLevel);
         }
     }
 }
