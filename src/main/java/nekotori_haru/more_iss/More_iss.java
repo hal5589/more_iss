@@ -3,12 +3,14 @@ package nekotori_haru.more_iss;
 import com.mojang.logging.LogUtils;
 import io.redspace.ironsspellbooks.api.registry.SpellRegistry;
 import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
-import nekotori_haru.more_iss.entity.ThunderboltFlashProjectile; // 追加
+import nekotori_haru.more_iss.entity.ThunderboltFlashProjectile;
+import nekotori_haru.more_iss.registry.ModEffects; // 追加
 import nekotori_haru.more_iss.spell.EnderShootingStar;
-import nekotori_haru.more_iss.spell.ThunderboltFlash; // 追加
+import nekotori_haru.more_iss.spell.OverburstBloodSpell; // 追加
+import nekotori_haru.more_iss.spell.ThunderboltFlash;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.world.entity.EntityType; // 追加
-import net.minecraft.world.entity.MobCategory; // 追加
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
@@ -45,8 +47,6 @@ public class More_iss {
     public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, MODID);
     public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
     public static final DeferredRegister<AbstractSpell> SPELLS = DeferredRegister.create(SpellRegistry.SPELL_REGISTRY_KEY, MODID);
-
-    // 【追加】エンティティ用のレジストリ
     public static final DeferredRegister<EntityType<?>> ENTITIES = DeferredRegister.create(ForgeRegistries.ENTITY_TYPES, MODID);
 
     // --- オブジェクト登録 ---
@@ -56,10 +56,11 @@ public class More_iss {
 
     // 魔法の登録
     public static final RegistryObject<AbstractSpell> ENDER_SHOOTING_STAR = SPELLS.register("ender_shooting_star", EnderShootingStar::new);
-    // 【追加】雷閃の登録
     public static final RegistryObject<AbstractSpell> RAISEN = SPELLS.register("raisen", ThunderboltFlash::new);
+    // 【追加】オーバーバースト：血液の登録
+    public static final RegistryObject<AbstractSpell> OVERBURST_BLOOD = SPELLS.register("overburst_blood", OverburstBloodSpell::new);
 
-    // 【追加】雷閃の弾丸（エンティティ）の登録
+    // エンティティの登録
     public static final RegistryObject<EntityType<ThunderboltFlashProjectile>> THUNDERBOLT_FLASH_PROJECTILE = ENTITIES.register("thunderbolt_flash_projectile",
             () -> EntityType.Builder.<ThunderboltFlashProjectile>of(ThunderboltFlashProjectile::new, MobCategory.MISC)
                     .sized(0.5F, 0.5F)
@@ -82,8 +83,10 @@ public class More_iss {
         ITEMS.register(modEventBus);
         CREATIVE_MODE_TABS.register(modEventBus);
         SPELLS.register(modEventBus);
-        // 【追加】エンティティレジストリをイベントバスに登録
         ENTITIES.register(modEventBus);
+
+        // 【追加】自作エフェクト（Overburst）の登録
+        ModEffects.register(modEventBus);
 
         MinecraftForge.EVENT_BUS.register(this);
         modEventBus.addListener(this::addCreative);
@@ -97,8 +100,6 @@ public class More_iss {
     private void addCreative(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == CreativeModeTabs.BUILDING_BLOCKS)
             event.accept(EXAMPLE_BLOCK_ITEM);
-
-        // 【任意】戦闘タブなどにスクロールを直接追加したい場合はここに追記
     }
 
     @SubscribeEvent

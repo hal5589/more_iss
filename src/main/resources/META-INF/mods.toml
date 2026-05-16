@@ -60,3 +60,6 @@ mandatory=true
 versionRange="[1.20.1,)"
 ordering="AFTER"
 side="BOTH"
+
+[[mixins]]
+config = "more_iss.mixins.json"

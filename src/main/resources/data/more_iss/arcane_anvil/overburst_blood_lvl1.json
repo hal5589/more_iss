@@ -1,0 +1,17 @@
+{
+  "base_spell": {
+    "spell": "irons_spellbooks:electrify",
+    "level": 3
+  },
+  "additional_spells": [
+    {
+      "spell": "irons_spellbooks:heartstop",
+      "level": 5
+    }
+  ],
+  "output_spell": {
+    "spell": "more_iss:overburst_blood",
+    "level": 1
+  },
+  "experience_cost": 30
+}

@@ -39,13 +39,13 @@ public class ThunderboltFlash extends AbstractSpell {
     private final DefaultConfig defaultConfig = new DefaultConfig()
             .setMinRarity(SpellRarity.RARE)
             .setSchoolResource(SchoolRegistry.LIGHTNING_RESOURCE)
-            .setMaxLevel(10)
-            .setCooldownSeconds(15)
+            .setMaxLevel(3)
+            .setCooldownSeconds(40)
             .build();
 
     public ThunderboltFlash() {
-        this.baseSpellPower     = 10;
-        this.spellPowerPerLevel = 3;
+        this.baseSpellPower     = 25;
+        this.spellPowerPerLevel = 5;
         this.castTime           = 40;
         this.baseManaCost       = 300;
     }
