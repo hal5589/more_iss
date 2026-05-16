@@ -6,5 +6,7 @@
   "spell.more_iss.overburst_blood": "オーバーバースト",
   "mob_effect.more_iss.overburst": "オーバーバースト",
   "ui.more_iss.damage_multiplier": "近接ダメージ上昇: %s%%",
-  "ui.more_iss.penetration_ratio": "耐性貫通割合: %s%%"
+  "ui.more_iss.penetration_ratio": "耐性貫通割合: %s%%",
+  "container.more_iss.arcane_anvil_crafting": "魔法合成",
+  "spell.more_iss.overburst_blood.guide": "帯電の魔力と心臓停止の代償を掛け合わせ、血の暴発を引き起こす未知のスクロール。\n攻撃力を瞬間的に上昇させ、あらゆる防御も貫く攻撃を。"
 }
