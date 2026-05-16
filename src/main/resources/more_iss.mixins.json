@@ -4,7 +4,7 @@
   "package": "nekotori_haru.more_iss.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
-    "MixinArcaneAnvilMenu",
+    "MixinArcaneAnvilMenu_overburst",
     "ItemCombinerMenuAccessor"
   ],
   "client": [],
