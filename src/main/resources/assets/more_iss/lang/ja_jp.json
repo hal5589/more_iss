@@ -1,12 +1,14 @@
 {
   "spell.more_iss.ender_shooting_star": "魔法の流星",
   "item.irons_spellbooks.scroll.more_iss.ender_shooting_star": "スクロール: 魔法の流星",
-  "spell.more_iss.raisen": "雷閃",
-  "item.irons_spellbooks.scroll.more_iss.raisen": "スクロール: 雷閃",
+  "spell.more_iss.raisen": "六重雷槍",
+  "item.irons_spellbooks.scroll.more_iss.raisen": "スクロール: 六重雷槍",
   "spell.more_iss.overburst_blood": "オーバーバースト",
   "mob_effect.more_iss.overburst": "オーバーバースト",
   "ui.more_iss.damage_multiplier": "近接ダメージ上昇: %s%%",
   "ui.more_iss.penetration_ratio": "耐性貫通割合: %s%%",
   "container.more_iss.arcane_anvil_crafting": "魔法合成",
-  "spell.more_iss.overburst_blood.guide": "帯電の魔力と心臓停止の代償を掛け合わせ、血の暴発を引き起こす未知のスクロール。\n攻撃力を瞬間的に上昇させ、あらゆる防御も貫く攻撃を。"
+  "spell.more_iss.overburst_blood.guide": "帯電の魔力と心臓停止の代償を掛け合わせ、血の暴発を引き起こす未知のスクロール。\n攻撃力を瞬間的に上昇させ、あらゆる防御も貫く攻撃を可能にする。",
+  "spell.more_iss.ender_shooting_star.guide": "大量のマジックミサイルを流星のごとく発射する。",
+  "spell.more_iss.raisen.guide": "六本の雷の槍で対象のモブを貫く。"
 }

@@ -1,60 +1,68 @@
 package nekotori_haru.more_iss.event;
 
-import io.redspace.ironsspellbooks.api.registry.AttributeRegistry;
-import nekotori_haru.more_iss.registry.ModEffects;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraftforge.event.entity.living.LivingDamageEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 @Mod.EventBusSubscriber(modid = "more_iss")
 public class OverburstEvents {
 
+    private static final ThreadLocal<Boolean> IS_PROCESSING = ThreadLocal.withInitial(() -> false);
+
     @SubscribeEvent
-    public static void onLivingHurt(LivingHurtEvent event) {
+    public static void onLivingDamage(LivingDamageEvent event) {
+        if (IS_PROCESSING.get()) return;
+
+        LivingEntity target = event.getEntity();
         DamageSource source = event.getSource();
 
-        if (source.getEntity() instanceof LivingEntity attacker && attacker.hasEffect(ModEffects.OVERBURST.get())) {
-            if (source.getDirectEntity() == attacker) {
-                LivingEntity target = event.getEntity();
-                MobEffectInstance effect = attacker.getEffect(ModEffects.OVERBURST.get());
+        // プレイヤー等の直接の近接殴りであるかチェック
+        if (source.getDirectEntity() instanceof LivingEntity attacker && source.getMsgId().equals("player")) {
+
+            if (attacker.hasEffect(nekotori_haru.more_iss.registry.ModEffects.OVERBURST.get())) {
+                MobEffectInstance effect = attacker.getEffect(nekotori_haru.more_iss.registry.ModEffects.OVERBURST.get());
                 if (effect == null) return;
 
-                int spellLevel = effect.getAmplifier() + 1;
+                // 💡 魔法クラスから送られてきたパックデータを解凍
+                int packedData = effect.getAmplifier();
+                int totalDamagePercent = packedData / 10; // 上位桁：ダメージ％ (例: 300)
+                int spellLevel = packedData % 10;         // 下位1桁：魔法レベル (1, 2, 3)
 
-                // 1. 魔法威力と物理基礎火力の取得
-                double spellPower = attacker.getAttributeValue(AttributeRegistry.SPELL_POWER.get());
-                float baseAttackDamage = (float) attacker.getAttributeValue(Attributes.ATTACK_DAMAGE);
+                float originalDamage = event.getAmount();
 
-                // 2. レベルに応じた基礎倍率 (Lv1:3.0, Lv2:5.0, Lv3:7.0)
-                float baseMultiplier = 1.0f + (spellLevel * 2.0f);
+                try {
+                    IS_PROCESSING.set(true);
 
-                // 3. トータルダメージ = 基礎火力 * (基礎倍率 * 魔法威力)
-                float totalDamage = baseAttackDamage * (baseMultiplier * (float)spellPower);
+                    // 💡 魔法クラスのUI計算と100%一致する総ダメージの計算
+                    // ％表記が300％なら、元のダメージを3倍にする
+                    float totalCalculatedDamage = originalDamage * (totalDamagePercent / 100.0f);
 
-                // 4. 貫通割合の計算 (Lv1:20%, Lv2:40%, Lv3:60%)
-                float penetrationRatio = spellLevel * 0.2f;
-                float piercingAmount = totalDamage * penetrationRatio;
-                float normalAmount = totalDamage - piercingAmount;
+                    // 💡 魔法レベル（1, 2, 3）に応じて正確に 2割、4割、6割 を算出
+                    float voidRatio = spellLevel * 0.2f;
+                    if (voidRatio > 0.6f) voidRatio = 0.6f;
 
-                // 5. 元の物理ダメージをキャンセルし、属性を分けて再適用
-                event.setCanceled(true);
-                target.hurt(target.damageSources().fellOutOfWorld(), piercingAmount); // 貫通分
-                target.hurt(target.damageSources().magic(), normalAmount);           // 通常分（魔法扱い）
+                    // 総ダメージを「奈落」と「通常物理」に分配
+                    float voidDamage = totalCalculatedDamage * voidRatio;
+                    float physicalDamage = totalCalculatedDamage * (1.0f - voidRatio);
 
-                // 6. 後処理
-                ItemStack weapon = attacker.getMainHandItem();
-                if (!weapon.isEmpty() && weapon.isDamageableItem()) {
-                    weapon.hurtAndBreak(weapon.getMaxDamage(), attacker, (e) -> {
-                        e.broadcastBreakEvent(InteractionHand.MAIN_HAND);
-                    });
+                    // 無敵フレームを強制破壊
+                    target.invulnerableTime = 0;
+
+                    // 物理ダメージの適用
+                    event.setAmount(physicalDamage);
+
+                    // 奈落ダメージの適用（fellOutOfWorld）
+                    target.hurt(target.damageSources().fellOutOfWorld(), voidDamage);
+
+                    // バフを消去
+                    attacker.removeEffect(nekotori_haru.more_iss.registry.ModEffects.OVERBURST.get());
+
+                } finally {
+                    IS_PROCESSING.set(false);
                 }
-                attacker.removeEffect(ModEffects.OVERBURST.get());
             }
         }
     }

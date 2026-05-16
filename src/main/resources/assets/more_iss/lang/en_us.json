@@ -1,3 +1,12 @@
 {
-  "container.more_iss.arcane_anvil_crafting": "Scroll Combination"
+  "spell.more_iss.ender_shooting_star": "Ender Shooting Star",
+  "item.irons_spellbooks.scroll.more_iss.ender_shooting_star": "Scroll: Ender Shooting Star",
+  "spell.more_iss.raisen": "Hexa Lightning Lance",
+  "item.irons_spellbooks.scroll.more_iss.raisen": "Scroll: Hexa Lightning Lance",
+  "spell.more_iss.overburst_blood": "Overburst",
+  "mob_effect.more_iss.overburst": "Overburst",
+  "ui.more_iss.damage_multiplier": "Melee Damage Bonus: %s%%",
+  "ui.more_iss.penetration_ratio": "Armor Penetration: %s%%",
+  "container.more_iss.arcane_anvil_crafting": "Scroll Combination",
+  "spell.more_iss.overburst_blood.guide": "Combines the shock of Charge and the toll of Heartstop to evoke a crimson explosion.\nInstantly multiplies melee damage and enables attacks to pierce all defenses."
 }

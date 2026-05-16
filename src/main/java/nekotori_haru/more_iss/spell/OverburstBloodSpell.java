@@ -53,9 +53,20 @@ public class OverburstBloodSpell extends AbstractSpell {
         this.castTime = 40;
     }
 
-    @Override public ResourceLocation getSpellResource() { return spellId; }
-    @Override public DefaultConfig getDefaultConfig() { return defaultConfig; }
-    @Override public CastType getCastType() { return CastType.LONG; }
+    @Override
+    public ResourceLocation getSpellResource() {
+        return spellId;
+    }
+
+    @Override
+    public DefaultConfig getDefaultConfig() {
+        return defaultConfig;
+    }
+
+    @Override
+    public CastType getCastType() {
+        return CastType.LONG;
+    }
 
     @Override
     public void onCast(Level world, int spellLevel, LivingEntity entity, CastSource castSource, MagicData playerMagicData) {
@@ -64,8 +75,21 @@ public class OverburstBloodSpell extends AbstractSpell {
             int heartstopDuration = (int) (getSpellPower(spellLevel, entity) * 20 * 5);
             entity.addEffect(new MobEffectInstance(MobEffectRegistry.HEARTSTOP.get(), heartstopDuration, 0));
 
-            // Amplifierにスペルレベルを格納
-            entity.addEffect(new MobEffectInstance(ModEffects.OVERBURST.get(), 200, spellLevel - 1));
+            // 💡 修正：UIと同じ「魔法威力 × 基礎倍率」の％数値を計算
+            float spellPower = getSpellPower(spellLevel, entity);
+            float baseMultiplier = 1.0f + (spellLevel * 2.0f);
+            // 例：Lv1で補正なしなら 1.0 * 3.0 * 100 = 300 が入る
+            int totalDamagePercent = (int) (spellPower * baseMultiplier * 100);
+
+            // 💡 Amplifierに「総ダメージ倍率（％）」を直接格納してイベントへ引き渡す！
+            // 第3引数の spellLevel（魔法レベル）もイベント側で奈落割合（2,4,6割）の判定に使うので、
+            // 競合しないようにイベント側では％数値から逆算、または％の中に魔法レベルの情報を仕込みます。
+            // ここではシンプルに「上位2桁を％、下位1桁をレベル」にするハックか、あるいはイベント側で％からレベルを逆算させます。
+            // 今回はより安全に、％数値をそのまま渡し、レベルは％の大きさ、または元の魔法レベルを逆算させましょう。
+            // もっとスマートに、％に「レベル」の情報を乗せます： (％数値 * 10) + (spellLevel)
+            int packedData = (totalDamagePercent * 10) + spellLevel;
+
+            entity.addEffect(new MobEffectInstance(ModEffects.OVERBURST.get(), 200, packedData));
 
             world.playSound(null, entity.getX(), entity.getY(), entity.getZ(),
                     SoundRegistry.HEARTSTOP_CAST.get(), entity.getSoundSource(), 2.0f, 0.8f);
