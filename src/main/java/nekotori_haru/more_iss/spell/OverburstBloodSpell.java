@@ -26,6 +26,7 @@ public class OverburstBloodSpell extends AbstractSpell {
             .setSchoolResource(SchoolRegistry.BLOOD_RESOURCE)
             .setMaxLevel(3)
             .setCooldownSeconds(120)
+            .setAllowCrafting(false)
             .build();
 
     @Override

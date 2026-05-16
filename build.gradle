@@ -134,6 +134,10 @@ repositories {
     mavenCentral()
     maven { url = "https://maven.minecraftforge.net" }
     maven { url = "https://cursemaven.com" }
+    maven {
+        name = "Damians Marketplace"
+        url = "https://modmaven.dev"
+    }
 }
 
 dependencies {
