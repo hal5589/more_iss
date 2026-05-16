@@ -6,95 +6,73 @@ import io.redspace.ironsspellbooks.api.spells.ISpellContainer;
 import io.redspace.ironsspellbooks.api.spells.SpellData;
 import io.redspace.ironsspellbooks.gui.arcane_anvil.ArcaneAnvilMenu;
 import io.redspace.ironsspellbooks.item.Scroll;
-import io.redspace.ironsspellbooks.registries.ItemRegistry;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.Container;
-import net.minecraft.world.inventory.ItemCombinerMenu;
 import net.minecraft.world.item.ItemStack;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.lang.reflect.Field;
+import java.util.Set;
 
 @Mixin(value = ArcaneAnvilMenu.class, remap = false)
 public class MixinArcaneAnvilMenu {
 
-    private static final Logger LOGGER = LogManager.getLogger();
+    // 別のModや自作のカスタムスペルなら、"irons_spellbooks" の部分をそのModのModIDに書き換えてください
+    private static final AbstractSpell BEAM = SpellRegistry.getSpell(new ResourceLocation("irons_spellbooks", "annihilation_beam"));
+    private static final AbstractSpell BOMB = SpellRegistry.getSpell(new ResourceLocation("irons_spellbooks", "annihilation_bomb"));
+    private static final AbstractSpell THORNS = SpellRegistry.getSpell(new ResourceLocation("irons_spellbooks", "ambush_thorns"));
+    private static final AbstractSpell RESONANCE = SpellRegistry.getSpell(new ResourceLocation("irons_spellbooks", "annihilation_resonance"));
 
-    private static final String SPELL_BASE       = "irons_spellbooks:electrify";
-    private static final int    LEVEL_BASE       = 3;
-    private static final String SPELL_ADD        = "irons_spellbooks:heartstop";
-    private static final int    LEVEL_ADD        = 5;
-    private static final String SPELL_OUTPUT_STR = "more_iss:overburst_blood";
-    private static final int    LEVEL_OUTPUT     = 1;
-    private static final ResourceLocation SPELL_OUTPUT_RL = new ResourceLocation("more_iss", "overburst_blood");
-
-    private static Field inputSlotsField  = null;
-    private static Field resultSlotsField = null;
-
-    static {
-        try {
-            inputSlotsField  = ItemCombinerMenu.class.getDeclaredField("inputSlots");
-            resultSlotsField = ItemCombinerMenu.class.getDeclaredField("resultSlots");
-            inputSlotsField.setAccessible(true);
-            resultSlotsField.setAccessible(true);
-        } catch (NoSuchFieldException e) {
-            LOGGER.error("[more_iss] MixinArcaneAnvilMenu: failed to reflect fields", e);
-        }
-    }
+    // 合成結果として出てくるカスタムスペル（more_iss:overburst_bloodなど、あなたのスペルIDを指定）
+    private static final AbstractSpell GEYSER = SpellRegistry.getSpell(new ResourceLocation("more_iss", "overburst_blood"));
 
     @Inject(method = "createResult", at = @At("TAIL"))
-    private void more_iss$injectCreateResult(CallbackInfo ci) {
-        if (inputSlotsField == null || resultSlotsField == null) return;
+    private void onCreateResult(CallbackInfo ci) {
+        ArcaneAnvilMenu self = (ArcaneAnvilMenu) (Object) this;
 
-        try {
-            Container inputSlots  = (Container) inputSlotsField.get(this);
-            Container resultSlots = (Container) resultSlotsField.get(this);
+        ItemStack baseItem = ((ItemCombinerMenuAccessor) self).getInputSlots().getItem(0);
+        ItemStack modifierItem = ((ItemCombinerMenuAccessor) self).getInputSlots().getItem(1);
 
-            ItemStack left  = inputSlots.getItem(0);
-            ItemStack right = inputSlots.getItem(1);
+        if (baseItem.isEmpty() || modifierItem.isEmpty()) return;
 
-            if (left.isEmpty() || right.isEmpty()) return;
-            if (!(left.getItem() instanceof Scroll)) return;
-            if (!(right.getItem() instanceof Scroll)) return;
+        // 順番固定版
+        if (baseItem.getItem() instanceof Scroll && modifierItem.getItem() instanceof Scroll) {
+            SpellData spell1 = ISpellContainer.get(baseItem).getSpellAtIndex(0);
+            SpellData spell2 = ISpellContainer.get(modifierItem).getSpellAtIndex(0);
 
-            SpellData leftSpell  = ISpellContainer.get(left).getSpellAtIndex(0);
-            SpellData rightSpell = ISpellContainer.get(right).getSpellAtIndex(0);
+            if (spell1 != null && spell2 != null) {
+                // 事前に定義したスペルオブジェクトと直接比較します
+                if (spell1.getSpell().equals(BEAM) && spell2.getSpell().equals(BOMB)) {
+                    if (GEYSER == null) return; // 安全対策
 
-            if (leftSpell == null || rightSpell == null) return;
-
-            AbstractSpell ls = leftSpell.getSpell();
-            AbstractSpell rs = rightSpell.getSpell();
-            if (ls == null || rs == null) return;
-
-            String leftId  = ls.getSpellId();
-            String rightId = rs.getSpellId();
-
-            boolean match =
-                    (SPELL_BASE.equals(leftId)  && leftSpell.getLevel()  == LEVEL_BASE
-                            && SPELL_ADD.equals(rightId)   && rightSpell.getLevel() == LEVEL_ADD)
-                            ||
-                            (SPELL_ADD.equals(leftId)    && leftSpell.getLevel()  == LEVEL_ADD
-                                    && SPELL_BASE.equals(rightId)  && rightSpell.getLevel() == LEVEL_BASE);
-
-            if (!match) return;
-
-            AbstractSpell outputSpell = SpellRegistry.getSpell(SPELL_OUTPUT_RL);
-            if (outputSpell == null) {
-                LOGGER.error("[more_iss] MixinArcaneAnvilMenu: spell not found: {}", SPELL_OUTPUT_RL);
-                return;
+                    ItemStack result = baseItem.copy();
+                    result.setCount(1);
+                    ISpellContainer.createScrollContainer(GEYSER, 1, result);
+                    ((ItemCombinerMenuAccessor) self).getResultSlots().setItem(0, result);
+                    return; // マッチしたらここで終了
+                }
             }
+        }
 
-            ItemStack output = new ItemStack(ItemRegistry.SCROLL.get());
-            ISpellContainer.createScrollContainer(outputSpell, LEVEL_OUTPUT, output);
-            resultSlots.setItem(0, output);
+        // 順番関係ない版
+        if (baseItem.getItem() instanceof Scroll && modifierItem.getItem() instanceof Scroll) {
+            SpellData spell1 = ISpellContainer.get(baseItem).getSpellAtIndex(0);
+            SpellData spell2 = ISpellContainer.get(modifierItem).getSpellAtIndex(0);
 
-        } catch (IllegalAccessException e) {
-            LOGGER.error("[more_iss] MixinArcaneAnvilMenu: reflect access failed", e);
+            if (spell1 != null && spell2 != null) {
+                Set<AbstractSpell> spells = Set.of(spell1.getSpell(), spell2.getSpell());
+
+                // 定義した2つのスペルが含まれているか Set でスマートに判定
+                if (BEAM != null && BOMB != null && spells.equals(Set.of(THORNS, RESONANCE))) {
+                    if (GEYSER == null) return;
+
+                    ItemStack result = baseItem.copy();
+                    result.setCount(1);
+                    ISpellContainer.createScrollContainer(GEYSER, 1, result);
+                    ((ItemCombinerMenuAccessor) self).getResultSlots().setItem(0, result);
+                }
+            }
         }
     }
 }
