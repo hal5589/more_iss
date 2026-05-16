@@ -37,7 +37,7 @@ public class ThunderboltFlash extends AbstractSpell {
             new ResourceLocation("more_iss", "raisen");
 
     private final DefaultConfig defaultConfig = new DefaultConfig()
-            .setMinRarity(SpellRarity.RARE)
+            .setMinRarity(SpellRarity.EPIC)
             .setSchoolResource(SchoolRegistry.LIGHTNING_RESOURCE)
             .setMaxLevel(3)
             .setCooldownSeconds(40)

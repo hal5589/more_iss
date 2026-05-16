@@ -4,11 +4,18 @@
   "spell.more_iss.raisen": "六重雷槍",
   "item.irons_spellbooks.scroll.more_iss.raisen": "スクロール: 六重雷槍",
   "spell.more_iss.overburst_blood": "オーバーバースト",
-  "mob_effect.more_iss.overburst": "オーバーバースト",
+  "effect.more_iss.overburst": "オーバーバースト",
   "ui.more_iss.damage_multiplier": "近接ダメージ上昇: %s%%",
   "ui.more_iss.penetration_ratio": "耐性貫通割合: %s%%",
   "container.more_iss.arcane_anvil_crafting": "魔法合成",
   "spell.more_iss.overburst_blood.guide": "帯電の魔力と心臓停止の代償を掛け合わせ、血の暴発を引き起こす未知のスクロール。\n攻撃力を瞬間的に上昇させ、あらゆる防御も貫く攻撃を可能にする。",
   "spell.more_iss.ender_shooting_star.guide": "大量のマジックミサイルを流星のごとく発射する。",
-  "spell.more_iss.raisen.guide": "六本の雷の槍で対象のモブを貫く。"
+  "spell.more_iss.raisen.guide": "六本の雷の槍で対象のモブを貫く。",
+  "spell.more_iss.providential_conduit": "天の導き",
+  "spell.more_iss.providential_conduit.desc": "自身が持つすべての有益なバフ効果を対象に転写します。持続時間はスペルレベルと魔法威力に応じて増加します。",
+  "ui.more_iss.providential_conduit.duration": "基本持続時間: %1$ss",
+  "spell.more_iss.sacrificial_edge": "自傷の刃",
+  "spell.more_iss.overburst_blood.guide": "詠唱すると自身に持続的な自傷デバフを付与します。デバフ中にもう一度詠唱すると、それまで自身が受けた総ダメージに比例した強力な血の斬撃を前方に放ちます。",
+  "ui.more_iss.sacrificial_edge.info": "ダメージ倍率: %1$sx",
+  "death.attack.sacrificial_purge": "%1$sの血液は膨大な魔力に耐え切れず破裂した"
 }

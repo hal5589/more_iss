@@ -26,32 +26,32 @@ public class MoreIssJeiPlugin implements IModPlugin {
 
     @Override
     public void registerCategories(IRecipeCategoryRegistration registration) {
-        // 💡 自作した専用カテゴリ（秘術の金床の見た目をしたスロット）をJEIに登録
+        // 💡 クラス名を正しい MoreIssAnvilCategory に修正
         registration.addRecipeCategories(new MoreIssAnvilCategory(registration.getJeiHelpers().getGuiHelper()));
     }
 
     @Override
     public void registerRecipes(IRecipeRegistration registration) {
+        // ─── レシピ1: オーバーバーストブラッド（元コードのまま完璧に維持） ───
         ItemStack chargeScroll = createScrollWithSpell(SpellRegistry.CHARGE_SPELL.get(), 3);
         ItemStack heartstopScroll = createScrollWithSpell(SpellRegistry.HEARTSTOP_SPELL.get(), 5);
         ItemStack outputScroll = createScrollWithSpell(SpellRegistry.getSpell(new ResourceLocation("more_iss", "overburst_blood")), 1);
 
         if (!chargeScroll.isEmpty() && !heartstopScroll.isEmpty() && !outputScroll.isEmpty()) {
-            // バニラの金床のデータ構造（左、右、出力）をそのまま流用してシリアライズ
             IJeiAnvilRecipe myCustomAnvilRecipe = registration.getVanillaRecipeFactory().createAnvilRecipe(
                     chargeScroll,
                     List.of(heartstopScroll),
                     List.of(outputScroll)
             );
-
-            // 💡 バニラ金床ではなく、自作した「MoreIssAnvilCategory.TYPE」にレシピを流し込む！
             registration.addRecipes(MoreIssAnvilCategory.TYPE, List.of(myCustomAnvilRecipe));
         }
+
+        // ─── レシピ2: サクリファシアル・エッジ（別ファイル呼び出し、こちらもスペルを修正） ───
+        MoreIssAnvilCategory_SACRIFICIAL_EDGE.register(registration);
     }
 
     @Override
     public void registerRecipeCatalysts(IRecipeCatalystRegistration registration) {
-        // 💡 自作カテゴリの「唯一のアイコン（触媒）」として、秘術の金床ブロックを登録
         net.minecraft.world.item.Item arcaneAnvilItem = ForgeRegistries.ITEMS.getValue(
                 new ResourceLocation("irons_spellbooks", "arcane_anvil")
         );

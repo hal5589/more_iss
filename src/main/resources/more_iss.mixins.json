@@ -5,6 +5,7 @@
   "compatibilityLevel": "JAVA_17",
   "mixins": [
     "MixinArcaneAnvilMenu_overburst",
+    "MixinArcaneAnvilMenu_sacrificial_edge",
     "ItemCombinerMenuAccessor"
   ],
   "client": [],
