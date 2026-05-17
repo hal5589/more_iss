@@ -1,7 +1,6 @@
 package nekotori_haru.more_iss.entity;
 
 import io.redspace.ironsspellbooks.entity.spells.lightning_lance.LightningLanceProjectile;
-import nekotori_haru.more_iss.More_iss;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
@@ -12,12 +11,15 @@ public class ThunderboltFlashProjectile extends LightningLanceProjectile {
     private final int WAIT_TIME = 10; // 0.5秒
     private LivingEntity target;
 
+    // 💡 1. ネットワーク同期やスポーン時にシステムが呼ぶコンストラクタ
     public ThunderboltFlashProjectile(EntityType<? extends LightningLanceProjectile> type, Level level) {
         super(type, level);
     }
 
-    public ThunderboltFlashProjectile(Level level, LivingEntity shooter, LivingEntity target) {
-        super(More_iss.THUNDERBOLT_FLASH_PROJECTILE.get(), level);
+    // 💡 2. 魔法クラス（ThunderboltFlash）から新しく生成する時に呼ぶコンストラクタ
+    // 第1引数に引数名「entityType」として明示的に受け取ることで、privateアクセスエラーを完全に回避します
+    public ThunderboltFlashProjectile(EntityType<? extends LightningLanceProjectile> entityType, Level level, LivingEntity shooter, LivingEntity target) {
+        super(entityType, level);
         this.setOwner(shooter);
         this.target = target;
     }

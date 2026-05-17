@@ -1,4 +1,4 @@
-package nekotori_haru.more_iss.spell;
+package nekotori_haru.more_iss.spell.blood;
 
 import io.redspace.ironsspellbooks.api.config.DefaultConfig;
 import io.redspace.ironsspellbooks.api.magic.MagicData;
@@ -27,40 +27,46 @@ public class SacrificialEdgeSpell extends AbstractSpell {
             .setMinRarity(SpellRarity.EPIC)
             .setSchoolResource(SchoolRegistry.BLOOD_RESOURCE)
             .setMaxLevel(5)
-            .setCooldownSeconds(15)
+            .setCooldownSeconds(60)
             .setAllowCrafting(false)
             .build();
 
-    // 💡 修正ポイント：指定された初期倍率「3」とレベルごとの加算「1.25」を設定
-    private final double customBaseSpellPower = 2.0;      // 魔法Lv1時点での1Hitあたりの増加威力
-    private final double customSpellPowerPerLevel = 0.5;  // 魔法Lvが1上がるごとの加算量
+    private final double customBaseSpellPower = 2.0;
+    private final double customSpellPowerPerLevel = 0.5;
 
     public SacrificialEdgeSpell() {
-        this.manaCostPerLevel = 5;
-        // 親クラス側の制限を避けるためのダミー設定（他はintの時と同様）
+        this.manaCostPerLevel = 25;
         this.baseSpellPower = 0;
         this.spellPowerPerLevel = 0;
         this.castTime = 0;
-        this.baseManaCost = 15;
+        this.baseManaCost = 100;
     }
 
-    // 💡 指定された通りの倍率スケールを計算するメソッド
     private double getCustomSpellPower(int spellLevel) {
-        // Lv1 = 3.0 + (0 * 1.25) = 3.0
-        // Lv2 = 3.0 + (1 * 1.25) = 4.25
-        // Lv3 = 3.0 + (2 * 1.25) = 5.5
         return this.customBaseSpellPower + ((spellLevel - 1) * this.customSpellPowerPerLevel);
     }
 
+    // ─── ツールチップおよび銘刻台GUIでの表示設定 ─────────────────────────────
     @Override
     public List<MutableComponent> getUniqueInfo(int spellLevel, LivingEntity caster) {
+        double generalPower = 1.0;
+        double bloodPower = 1.0;
+
+        // 💡 解決：caster が null（銘刻台GUIなど）の場合は属性計算をスキップして基本値を表示
+        if (caster != null) {
+            generalPower = caster.getAttributeValue(io.redspace.ironsspellbooks.api.registry.AttributeRegistry.SPELL_POWER.get());
+            bloodPower = caster.getAttributeValue(io.redspace.ironsspellbooks.api.registry.AttributeRegistry.BLOOD_SPELL_POWER.get());
+        }
+
+        double finalPower = getCustomSpellPower(spellLevel) * generalPower * bloodPower;
         return List.of(
-                Component.translatable("ui.more_iss.sacrificial_edge.info", Utils.stringTruncation(getCustomSpellPower(spellLevel), 2))
+                Component.translatable("ui.more_iss.sacrificial_edge.info", Utils.stringTruncation(finalPower, 2))
         );
     }
 
     @Override
-    public DefaultConfig getDefaultConfig() { return defaultConfig; }
+    public DefaultConfig getDefaultConfig() { return this.defaultConfig; }
+
     @Override
     public CastType getCastType() { return CastType.INSTANT; }
     @Override
@@ -71,6 +77,7 @@ public class SacrificialEdgeSpell extends AbstractSpell {
         return 2;
     }
 
+    // ─── コアロジック ────────────────────────────────────────────
     @Override
     public void onCast(Level world, int spellLevel, LivingEntity entity, CastSource castSource, MagicData playerMagicData) {
         var recasts = playerMagicData.getPlayerRecasts();
@@ -79,11 +86,20 @@ public class SacrificialEdgeSpell extends AbstractSpell {
             recasts.addRecast(new RecastInstance(getSpellId(), spellLevel, getRecastCount(spellLevel, entity), 600, castSource, null), playerMagicData);
 
             if (!world.isClientSide) {
+                // ① 通常の自傷ドットデバフ（時間はバニラのまま、強度は0からスタート）
                 entity.addEffect(new MobEffectInstance(
                         ModEffects.SACRIFICIAL_BLEED.get(),
                         72000,
                         0,
                         false, true, true
+                ));
+
+                // ② 魔法レベルを記録するためだけの非表示マーカーバフ
+                entity.addEffect(new MobEffectInstance(
+                        ModEffects.SACRIFICIAL_MARKER.get(),
+                        72000,
+                        spellLevel,
+                        false, false, false
                 ));
             }
         }
@@ -94,11 +110,11 @@ public class SacrificialEdgeSpell extends AbstractSpell {
                 if (effect != null) {
                     int hitCount = effect.getAmplifier();
 
-                    // 修正された正確なdouble倍率を取得
                     double damagePerHit = getCustomSpellPower(spellLevel);
 
-                    // 最終ダメージ ＝ 自傷回数 × 設定された倍率 (最低保証 5.0f)
-                    float finalSlashDamage = (float) Math.max(5.0, (double) hitCount * damagePerHit);
+                    double generalPower = entity.getAttributeValue(io.redspace.ironsspellbooks.api.registry.AttributeRegistry.SPELL_POWER.get());
+                    double bloodPower = entity.getAttributeValue(io.redspace.ironsspellbooks.api.registry.AttributeRegistry.BLOOD_SPELL_POWER.get());
+                    float finalSlashDamage = (float) Math.max(5.0, ((double) hitCount * damagePerHit) * generalPower * bloodPower);
 
                     if (!world.isClientSide) {
                         BloodSlashProjectile bloodSlash = new BloodSlashProjectile(world, entity);
@@ -110,6 +126,7 @@ public class SacrificialEdgeSpell extends AbstractSpell {
                     }
 
                     entity.removeEffect(ModEffects.SACRIFICIAL_BLEED.get());
+                    entity.removeEffect(ModEffects.SACRIFICIAL_MARKER.get());
                 }
             }
         }

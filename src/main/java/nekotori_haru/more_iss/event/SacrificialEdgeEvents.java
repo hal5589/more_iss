@@ -19,42 +19,33 @@ public class SacrificialEdgeEvents {
     private static final ThreadLocal<Boolean> IS_UPDATING = ThreadLocal.withInitial(() -> false);
     private static final Random RANDOM = new Random();
 
-    // ─── 既存ロジック：被弾時にカウントを蓄積 ───────────────────────────────────
-
     @SubscribeEvent
     public static void onSacrificialAbsorb(LivingDamageEvent event) {
-        // エフェクトの再付与による無限ループを徹底防止
         if (IS_UPDATING.get()) return;
 
         LivingEntity entity = event.getEntity();
         if (entity == null || entity.level().isClientSide) return;
 
-        // 対象が自傷デバフ「サクリフィシャル・ブリード」を所持している場合
         if (entity.hasEffect(ModEffects.SACRIFICIAL_BLEED.get())) {
             MobEffectInstance currentEffect = entity.getEffect(ModEffects.SACRIFICIAL_BLEED.get());
             if (currentEffect == null) return;
 
-            // 被弾ダメージが0以下（完全に無効化されているなど）ならカウントしない
             if (event.getAmount() <= 0) return;
 
             try {
                 IS_UPDATING.set(true);
 
-                // 現在のアンプリファイア（＝これまでの累積自傷Hit数）を取得
                 int currentHitCount = currentEffect.getAmplifier();
                 int duration = currentEffect.getDuration();
 
-                // 被弾を検知したので、純粋にカウントを+1する（ダメージの大小は無視）
                 int newHitCount = currentHitCount + 1;
-
-                // バニラのMobEffectアンプリファイアの限界上限（255）でストップさせる
                 if (newHitCount > 255) newHitCount = 255;
 
-                // 残り時間（無限状態）を維持したまま、カウント（アンプリファイア）を増やして上書き付与
+                // 💡 時間は何もいじらずそのまま引き継ぎ（これで高速ドットバグは完璧に直ります）
                 entity.addEffect(new MobEffectInstance(
                         ModEffects.SACRIFICIAL_BLEED.get(),
                         duration,
-                        newHitCount, // 新しいHit数をアンプリファイアとして保存
+                        newHitCount,
                         currentEffect.isAmbient(),
                         currentEffect.isVisible(),
                         currentEffect.showIcon()
@@ -66,39 +57,59 @@ public class SacrificialEdgeEvents {
         }
     }
 
-    // ─── 追加ロジック：死亡時に血液針をランダム射出 ───────────────────────────────────
-
     @SubscribeEvent
     public static void onLivingDeath(LivingDeathEvent event) {
         LivingEntity entity = event.getEntity();
         if (entity == null) return;
 
         Level world = entity.level();
-        // クライアント側ではエンティティ生成などの処理を行わない
         if (world.isClientSide) return;
 
-        // カスタムダメージソースのID判定、または対象が対象のエフェクトを持っているかチェック
         if (event.getSource().getMsgId().equals("sacrificial_purge") || entity.hasEffect(ModEffects.SACRIFICIAL_BLEED.get())) {
-            MobEffectInstance effect = entity.getEffect(ModEffects.SACRIFICIAL_BLEED.get());
+            MobEffectInstance bleedEffect = entity.getEffect(ModEffects.SACRIFICIAL_BLEED.get());
 
-            if (effect != null) {
-                int hitCount = effect.getAmplifier();
+            if (bleedEffect != null) {
+                int hitCount = bleedEffect.getAmplifier();
 
-                // 💡 火力計算：蓄積されたカウント数（hitCount）× 3.5f をベース総火力とし、その5分の1を1本あたりに載せる
-                // （最低保証として1本の威力が最低1.0fになるように設定）
-                float baseDamage = (float) Math.max(5.0, (double) hitCount * 3.5);
+                // 💡 修正：自殺だろうが他殺だろうが、新設したマーカーバフの強度からレベルを安全に100%引っこ抜く
+                int spellLevel = 1;
+                if (entity.hasEffect(ModEffects.SACRIFICIAL_MARKER.get())) {
+                    MobEffectInstance markerEffect = entity.getEffect(ModEffects.SACRIFICIAL_MARKER.get());
+                    if (markerEffect != null) {
+                        spellLevel = markerEffect.getAmplifier();
+                    }
+                }
+
+                LivingEntity attacker = null;
+                if (event.getSource().getEntity() instanceof LivingEntity) {
+                    attacker = (LivingEntity) event.getSource().getEntity();
+                }
+
+                if (attacker == null) {
+                    attacker = entity;
+                }
+
+                double generalPower = attacker.getAttributeValue(io.redspace.ironsspellbooks.api.registry.AttributeRegistry.SPELL_POWER.get());
+                double bloodPower = attacker.getAttributeValue(io.redspace.ironsspellbooks.api.registry.AttributeRegistry.BLOOD_SPELL_POWER.get());
+
+                double levelMultiplier = 2.0 + ((spellLevel - 1) * 0.5);
+                float baseDamage = (float) Math.max(5.0, ((double) hitCount * levelMultiplier) * generalPower * bloodPower);
                 float needleDamage = baseDamage / 5.0f;
 
-                // 血液針を5本、ランダムな3Dベクトルへ射出
-                for (int i = 0; i < 5; i++) {
+                // 💡 マーカーバフに保存された正確なレベルに基づいて本数を決定（Lv5なら25本）
+                int needleCount = spellLevel * 5;
+
+                for (int i = 0; i < needleCount; i++) {
                     BloodNeedle needle = new BloodNeedle(world, entity);
                     needle.setDamage(needleDamage);
 
-                    // 目の位置から少し上（胸〜頭付近）から破裂させる
+                    if (attacker != null) {
+                        needle.setOwner(attacker);
+                    }
+
                     Vec3 spawnPos = entity.getEyePosition().add(0, 0.5, 0);
                     needle.moveTo(spawnPos);
 
-                    // 完全ランダムな3次元の向き（球面上の均等なランダムベクトル）を計算
                     float u = RANDOM.nextFloat();
                     float v = RANDOM.nextFloat();
                     float theta = u * 2.0f * (float) Math.PI;
@@ -110,7 +121,6 @@ public class SacrificialEdgeEvents {
 
                     Vec3 launchDirection = new Vec3(x, y, z).normalize();
 
-                    // 針に速度と向きを与えてワールドにスポーン
                     needle.shoot(launchDirection);
                     world.addFreshEntity(needle);
                 }

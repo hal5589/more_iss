@@ -13,7 +13,7 @@
       }
     }
   },
-  "modifier_item": {
+  "modifier_item": {sacrificial_bleed.png
     "item": "irons_spellbooks:scroll",
     "nbt": {
       "ISpellContainer": {

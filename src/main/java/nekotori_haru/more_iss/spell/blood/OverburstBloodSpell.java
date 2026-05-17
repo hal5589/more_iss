@@ -1,4 +1,4 @@
-package nekotori_haru.more_iss.spell;
+package nekotori_haru.more_iss.spell.blood;
 
 import io.redspace.ironsspellbooks.api.config.DefaultConfig;
 import io.redspace.ironsspellbooks.api.magic.MagicData;
@@ -50,6 +50,7 @@ public class OverburstBloodSpell extends AbstractSpell {
     public OverburstBloodSpell() {
         this.baseSpellPower = 1;
         this.baseManaCost = 400;
+        this.manaCostPerLevel = 200;
         this.castTime = 40;
     }
 

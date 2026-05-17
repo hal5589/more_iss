@@ -1,4 +1,4 @@
-package nekotori_haru.more_iss.spell;
+package nekotori_haru.more_iss.spell.ender;
 
 import io.redspace.ironsspellbooks.api.config.DefaultConfig;
 import io.redspace.ironsspellbooks.api.magic.MagicData;

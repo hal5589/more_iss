@@ -1,7 +1,7 @@
 package nekotori_haru.more_iss.registry;
 
 import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
-import nekotori_haru.more_iss.spell.ProvidentialConduitSpell;
+import nekotori_haru.more_iss.spell.holy.ProvidentialConduitSpell;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.RegistryObject;
 

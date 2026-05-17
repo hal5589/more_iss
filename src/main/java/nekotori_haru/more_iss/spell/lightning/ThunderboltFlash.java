@@ -1,4 +1,4 @@
-package nekotori_haru.more_iss.spell;
+package nekotori_haru.more_iss.spell.lightning;
 
 import io.redspace.ironsspellbooks.api.config.DefaultConfig;
 import io.redspace.ironsspellbooks.api.magic.MagicData;
@@ -47,7 +47,8 @@ public class ThunderboltFlash extends AbstractSpell {
         this.baseSpellPower     = 25;
         this.spellPowerPerLevel = 5;
         this.castTime           = 40;
-        this.baseManaCost       = 300;
+        this.baseManaCost       = 200;
+        this.manaCostPerLevel = 100;
     }
 
     // ───────── AbstractSpell オーバーライド ─────────

@@ -1,4 +1,4 @@
-package nekotori_haru.more_iss.spell;
+package nekotori_haru.more_iss.spell.holy;
 
 import io.redspace.ironsspellbooks.api.config.DefaultConfig;
 import io.redspace.ironsspellbooks.api.magic.MagicData;
@@ -26,18 +26,25 @@ public class ProvidentialConduitSpell extends AbstractSpell {
 
     private final ResourceLocation spellId = new ResourceLocation("more_iss", "providential_conduit");
 
-    // 基準時間: lv1=5秒(100tick)、レベルごとに+2秒(40tick) → Lv10で23秒
     private static final int BASE_DURATION_TICKS_LV1 = 5 * 20;
     private static final int DURATION_PER_LEVEL_TICKS = 2 * 20;
 
-    // 💡 解決策: 小数点を扱える独自の魔法威力（倍率）変数を定義
-    private final float customBaseSpellPower = 1.0f;       // 基礎パワー (1.0 = 100%)
-    private final float customSpellPowerPerLevel = 0.1f;   // 1レベルごとに +10% (0.1f) ずつ上昇
+    private final float customBaseSpellPower = 1.0f;
+    private final float customSpellPowerPerLevel = 0.1f;
 
+    // ─── ツールチップおよび銘刻台GUIでの表示設定 ─────────────────────────────
     @Override
     public List<MutableComponent> getUniqueInfo(int spellLevel, LivingEntity caster) {
-        // 独自に計算した小数点パワー（%倍率）を時間計算に渡す
-        float powerMultiplier = getCustomSpellPower(spellLevel);
+        float generalPower = 1.0f;
+        float holyPower = 1.0f;
+
+        // 💡 解決：caster が null（銘刻台GUIなど）の場合は属性計算をスキップして基本値を表示
+        if (caster != null) {
+            generalPower = (float) caster.getAttributeValue(io.redspace.ironsspellbooks.api.registry.AttributeRegistry.SPELL_POWER.get());
+            holyPower = (float) caster.getAttributeValue(io.redspace.ironsspellbooks.api.registry.AttributeRegistry.HOLY_SPELL_POWER.get());
+        }
+
+        float powerMultiplier = getCustomSpellPower(spellLevel) * generalPower * holyPower;
         int finalTicks = calcDurationTicks(spellLevel, powerMultiplier);
         float finalSec = finalTicks / 20f;
 
@@ -55,23 +62,22 @@ public class ProvidentialConduitSpell extends AbstractSpell {
             .build();
 
     public ProvidentialConduitSpell() {
-        this.manaCostPerLevel = 1;
-        // 💡 エラーの起きていたシステム側の変数は 0 を代入して安全に黙らせます
+        this.manaCostPerLevel = 15;
         this.baseSpellPower = 0;
         this.spellPowerPerLevel = 0;
-        this.castTime = 20; // 1秒
+        this.castTime = 20;
         this.baseManaCost = 40;
     }
 
-    // 💡 独自の float（小数点）ベースの魔法威力を計算するメソッド
     private float getCustomSpellPower(int spellLevel) {
-        // Lv1  = 1.0 + (0 * 0.1) = 1.0  (100%)
-        // Lv10 = 1.0 + (9 * 0.1) = 1.9  (190%)
         return this.customBaseSpellPower + ((float)(spellLevel - 1) * this.customSpellPowerPerLevel);
     }
 
     @Override
-    public DefaultConfig getDefaultConfig() { return defaultConfig; }
+    public DefaultConfig getDefaultConfig() {
+        return this.defaultConfig;
+    }
+
     @Override
     public CastType getCastType() { return CastType.LONG; }
     @Override
@@ -107,17 +113,18 @@ public class ProvidentialConduitSpell extends AbstractSpell {
             LivingEntity target = targetData.getTarget((ServerLevel) level);
             if (target == null) target = caster;
 
-            // 💡 独自メソッドから精確な float の％倍率を取得
-            float powerMultiplier = getCustomSpellPower(spellLevel);
+            float generalPower = (float) caster.getAttributeValue(io.redspace.ironsspellbooks.api.registry.AttributeRegistry.SPELL_POWER.get());
+            float holyPower = (float) caster.getAttributeValue(io.redspace.ironsspellbooks.api.registry.AttributeRegistry.HOLY_SPELL_POWER.get());
+
+            float powerMultiplier = getCustomSpellPower(spellLevel) * generalPower * holyPower;
             int durationTicks = calcDurationTicks(spellLevel, powerMultiplier);
 
-            // キャスター自身の有益バフをすべてターゲットに付与
             for (MobEffectInstance effectInstance : caster.getActiveEffects()) {
                 if (!effectInstance.getEffect().isBeneficial()) continue;
 
                 target.addEffect(new MobEffectInstance(
                         effectInstance.getEffect(),
-                        durationTicks, // %で綺麗に補正された持続時間
+                        durationTicks,
                         effectInstance.getAmplifier(),
                         effectInstance.isAmbient(),
                         effectInstance.isVisible(),
@@ -136,7 +143,6 @@ public class ProvidentialConduitSpell extends AbstractSpell {
     }
 
     private int calcDurationTicks(int spellLevel, float powerMultiplier) {
-        // 例：Lv10のベース 23秒（460 ticks）× 独自威力 1.9倍 ＝ 43.7秒（874 ticks）
         return Math.round((float) getBaseDurationTicks(spellLevel) * powerMultiplier);
     }
 }
