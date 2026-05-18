@@ -9,14 +9,13 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
-import java.util.Optional;
 
-public class MorelssAnvilCategory_OVERBURST {
+public class MoreIssAnvilCategory_OVERBURST {
 
     /**
-     * 💡 オーバーバーストブラッドのレシピ生成（ItemStack指定版）
+     * 💡 解決策A: 他のクラスと名前・構造を完全に統一
      */
-    public static Optional<IJeiAnvilRecipe> createRecipe(IRecipeRegistration registration) {
+    public static void register(IRecipeRegistration registration) {
 
         // ─── 1. 左スロット：チャージ Lv3 ───
         ItemStack leftInput = new ItemStack(ItemRegistry.SCROLL.get());
@@ -32,15 +31,16 @@ public class MorelssAnvilCategory_OVERBURST {
                 SpellRegistry.getSpell(new ResourceLocation("more_iss", "overburst_blood")), 1, output
         );
 
-        // 安全チェック
+        // すべてのアイテムが正常に生成されている場合のみJEIへ登録
         if (!leftInput.isEmpty() && !rightInput.isEmpty() && !output.isEmpty()) {
-            return Optional.of(registration.getVanillaRecipeFactory().createAnvilRecipe(
+            IJeiAnvilRecipe recipe = registration.getVanillaRecipeFactory().createAnvilRecipe(
                     leftInput,
                     List.of(rightInput),
                     List.of(output)
-            ));
-        }
+            );
 
-        return Optional.empty();
+            // 💡 共通カテゴリ「MoreIssAnvilCategory.TYPE」へ直接流し込み
+            registration.addRecipes(MoreIssAnvilCategory.TYPE, List.of(recipe));
+        }
     }
 }

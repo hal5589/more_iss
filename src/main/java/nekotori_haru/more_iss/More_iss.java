@@ -5,13 +5,16 @@ import io.redspace.ironsspellbooks.api.registry.SpellRegistry;
 import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
 import nekotori_haru.more_iss.registry.ModEffects;
 import nekotori_haru.more_iss.spell.ender.EnderShootingStar;
-import nekotori_haru.more_iss.spell.ender.FreischutzSpell; // ⭕ インポートが正常に通ることを確認
+import nekotori_haru.more_iss.spell.ender.FreischutzSpell;
 import nekotori_haru.more_iss.spell.blood.OverburstBloodSpell;
 import nekotori_haru.more_iss.spell.lightning.ThunderboltFlash;
 import nekotori_haru.more_iss.spell.holy.ProvidentialConduitSpell;
 import nekotori_haru.more_iss.spell.eldritch.SoulLinkSpell;
 import nekotori_haru.more_iss.spell.blood.SacrificialEdgeSpell;
 import nekotori_haru.more_iss.spell.ice.AbsoluteZeroSpell;
+import nekotori_haru.more_iss.spell.eldritch.DisintegrationSpell; // 新しく作成するスペルをインポート
+import nekotori_haru.more_iss.util.DisintegrationState;
+import nekotori_haru.more_iss.util.DisintegrationTargetManager;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.food.FoodProperties;
@@ -57,6 +60,9 @@ public class More_iss {
     public static final RegistryObject<AbstractSpell> SOUL_LINK = SPELLS.register("soul_link", SoulLinkSpell::new);
     public static final RegistryObject<AbstractSpell> ABSOLUTE_ZERO = SPELLS.register("absolute_zero", AbsoluteZeroSpell::new);
 
+    // 【追加】崩壊魔法（Fantasy Ending）本体のレジストリ登録
+    public static final RegistryObject<AbstractSpell> DISINTEGRATION = SPELLS.register("disintegration", DisintegrationSpell::new);
+
     // Forgeへのイベントバス登録コンストラクタ
     public More_iss() {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
@@ -70,6 +76,10 @@ public class More_iss {
         CREATIVE_MODE_TABS.register(modEventBus);
         SPELLS.register(modEventBus);
         ENTITIES.register(modEventBus);
+
+        // 【追加】崩壊魔法システム裏側のイベントハンドラーを初期化・常駐化
+        DisintegrationState.init();
+        DisintegrationTargetManager.init();
 
         LOGGER.info("More_ISS Registries have been successfully initialized!");
     }

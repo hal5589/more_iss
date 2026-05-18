@@ -25,7 +25,6 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-@AutoSpellConfig
 public class SoulLinkSpell extends AbstractEldritchSpell {
 
     private final ResourceLocation spellId = new ResourceLocation("more_iss", "soul_link");

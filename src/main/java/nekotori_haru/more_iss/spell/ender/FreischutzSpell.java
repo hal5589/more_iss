@@ -19,13 +19,14 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-@AutoSpellConfig
 public class FreischutzSpell extends AbstractSpell {
     private final ResourceLocation spellId = new ResourceLocation("more_iss", "freischutz");
 
@@ -34,6 +35,7 @@ public class FreischutzSpell extends AbstractSpell {
             .setSchoolResource(SchoolRegistry.ENDER_RESOURCE)
             .setMaxLevel(3)
             .setCooldownSeconds(45)
+            .setAllowCrafting(false)
             .build();
 
     public FreischutzSpell() {
@@ -44,7 +46,6 @@ public class FreischutzSpell extends AbstractSpell {
         this.baseManaCost = 150;
     }
 
-    // ─── ツールチップおよび銘刻台GUIでの表示設定 ─────────────────────────────
     @Override
     public List<MutableComponent> getUniqueInfo(int spellLevel, LivingEntity caster) {
         double power = this.baseSpellPower + ((spellLevel - 1) * this.spellPowerPerLevel);
@@ -71,7 +72,6 @@ public class FreischutzSpell extends AbstractSpell {
 
     @Override
     public boolean checkPreCastConditions(Level level, int spellLevel, LivingEntity entity, MagicData playerMagicData) {
-        // 「報い」デバフ（最大体力低下）がかかっている間は、再発動不可（警告メッセージのみ、即死ダメージはなし）
         if (entity.hasEffect(ModEffects.RETRIBUTION.get())) {
             if (!level.isClientSide) {
                 entity.sendSystemMessage(Component.translatable("ui.more_iss.freischutz.penalty_trigger"));
@@ -82,34 +82,41 @@ public class FreischutzSpell extends AbstractSpell {
         return Utils.preCastTargetHelper(level, entity, playerMagicData, this, 32, .35f);
     }
 
-    // ─── コアロジック ────────────────────────────────────────────
     @Override
     public void onCast(Level level, int spellLevel, LivingEntity entity, CastSource castSource, MagicData playerMagicData) {
         var recasts = playerMagicData.getPlayerRecasts();
         int durationTicks = (int) (getContractDurationSeconds(spellLevel) * 20);
 
-        // 初回発動時：リキャストインスタンスを生成し、悪魔の契約デバフを付与
         if (!recasts.hasRecastForSpell(getSpellId())) {
             recasts.addRecast(new RecastInstance(getSpellId(), spellLevel, getRecastCount(spellLevel, entity), durationTicks, castSource, null), playerMagicData);
-            entity.addEffect(new MobEffectInstance(ModEffects.DEMONIC_COVENANT.get(), durationTicks, 0, false, false, true));
+
+            MobEffectInstance contract = new MobEffectInstance(ModEffects.DEMONIC_COVENANT.get(), durationTicks, 0, false, false, true);
+            contract.setCurativeItems(new ArrayList<ItemStack>());
+            entity.addEffect(contract);
         }
-        // 2発目以降のリキャスト処理中
         else {
             RecastInstance recastInstance = recasts.getRecastInstance(getSpellId());
-            // 💡 解決：「悪魔の契約デバフがまだ残っている期間中」かつ「これが最後の1発」の時だけ報いを下す
             if (recastInstance != null && recastInstance.getRemainingRecasts() <= 1) {
                 if (entity.hasEffect(ModEffects.DEMONIC_COVENANT.get())) {
                     if (!level.isClientSide) {
-                        // 契約デバフを消去し、最大体力低下の「報い」デバフ（1分間=1200ticks）を付与
                         entity.removeEffect(ModEffects.DEMONIC_COVENANT.get());
-                        entity.addEffect(new MobEffectInstance(ModEffects.RETRIBUTION.get(), 1200, 0));
-                        entity.sendSystemMessage(Component.translatable("ui.more_iss.freischutz.exhausted_penalty"));
+
+                        MobEffectInstance retribution = new MobEffectInstance(ModEffects.RETRIBUTION.get(), 1200, 0);
+                        retribution.setCurativeItems(new ArrayList<ItemStack>());
+                        entity.addEffect(retribution);
+
+                        if (!entity.hasEffect(ModEffects.RETRIBUTION.get())) {
+                            entity.setHealth(0.0f);
+                            entity.hurt(level.damageSources().fellOutOfWorld(), Float.MAX_VALUE);
+                            entity.sendSystemMessage(Component.translatable("ui.more_iss.freischutz.bypass_penalty"));
+                        } else {
+                            entity.sendSystemMessage(Component.translatable("ui.more_iss.freischutz.exhausted_penalty"));
+                        }
                     }
                 }
             }
         }
 
-        // 矢の生成・発射
         if (!level.isClientSide && level instanceof ServerLevel serverLevel) {
             LivingEntity target = null;
             if (playerMagicData.getAdditionalCastData() instanceof TargetEntityCastData castTargetingData) {
@@ -124,6 +131,9 @@ public class FreischutzSpell extends AbstractSpell {
                 net.minecraft.world.phys.Vec3 direction = target.position().add(0, target.getBbHeight() * 0.5, 0).subtract(magicArrow.position()).normalize();
                 magicArrow.shoot(direction);
                 magicArrow.addTag("freischutz_target_id:" + target.getId());
+
+                // 💡 追記：矢にターゲットを設定して自動追尾（ホーミング）を有効化
+                magicArrow.setHomingTarget(target);
             } else {
                 magicArrow.shoot(entity.getLookAngle());
             }
@@ -135,14 +145,21 @@ public class FreischutzSpell extends AbstractSpell {
         super.onCast(level, spellLevel, entity, castSource, playerMagicData);
     }
 
-    // ─── リキャスト終了時の処理 ────────────────────────────────────
     @Override
     public void onRecastFinished(ServerPlayer player, RecastInstance recastInstance, RecastResult result, ICastDataSerializable castData) {
-        // 弾を残したまま契約時間が終了（TIMEOUT）した場合も、契約を解除して「報い」デバフを付与
         if (result == RecastResult.TIMEOUT) {
             if (player.hasEffect(ModEffects.DEMONIC_COVENANT.get())) {
                 player.removeEffect(ModEffects.DEMONIC_COVENANT.get());
-                player.addEffect(new MobEffectInstance(ModEffects.RETRIBUTION.get(), 1200, 0));
+
+                MobEffectInstance retribution = new MobEffectInstance(ModEffects.RETRIBUTION.get(), 1200, 0);
+                retribution.setCurativeItems(new ArrayList<ItemStack>());
+                player.addEffect(retribution);
+
+                if (!player.hasEffect(ModEffects.RETRIBUTION.get())) {
+                    player.setHealth(0.0f);
+                    player.hurt(player.level().damageSources().fellOutOfWorld(), Float.MAX_VALUE);
+                    player.sendSystemMessage(Component.translatable("ui.more_iss.freischutz.bypass_penalty"));
+                }
             }
         }
         super.onRecastFinished(player, recastInstance, result, castData);

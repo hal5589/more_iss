@@ -15,7 +15,7 @@
   "spell.more_iss.providential_conduit.guide": "自身が持つすべての有益なバフ効果を対象に転写します。持続時間はスペルレベルと魔法威力に応じて増加します。",
   "ui.more_iss.providential_conduit.duration": "基本持続時間: %1$ss",
   "spell.more_iss.sacrificial_edge": "自傷の刃",
-  "spell.more_iss.sacrificial_edge.guide": "詠唱すると自身に持続的な自傷デバフを付与します。デバフ中にもう一度詠唱すると、それまで自身が受けた総ダメージに比例した強力な血の斬撃を前方に放ちます。",
+  "spell.more_iss.sacrificial_edge.guide": "詠唱すると自身に持続的な自傷デバフを付与します。デバフ中もう一度詠唱すると、それまで自身が受けた総ダメージに比例した強力な血の斬撃を前方に放ちます。",
   "ui.more_iss.sacrificial_edge.info": "ダメージ倍率: %1$sx",
   "death.attack.sacrificial_purge": "%1$sの血液は膨大な魔力に耐え切れず破裂した",
   "effect.more_iss.sacrificial_bleed": "自傷",
@@ -29,10 +29,12 @@
   "ui.more_iss.absolute_zero.ice_count": "氷の影の数: %s",
 
   "spell.more_iss.freischutz": "魔弾の射手",
-  "spell.more_iss.freischutz.guide": "悪魔と契約を交わし、必中の魔弾を7発装填する。契約期間中にすべての魔弾を撃ち尽くすか、弾を残したまま制限時間を迎えると、重い「報い」のペナルティが下る。",
+  "spell.more_iss.freischutz.guide": "悪魔と契約を交わし、必中の魔弾を7発装填する。契約期間中にすべての魔弾を撃ち尽くすと、「報い」が下る。",
   "ui.more_iss.freischutz.contract_duration": "契約期間: %s秒",
-  "ui.more_iss.freischutz.penalty_trigger": "悪魔への報いを受けている間は、新たに契約を結ぶことはできない！",
-  "ui.more_iss.freischutz.exhausted_penalty": "魔弾を撃ち尽くした！悪魔への報い（ペナルティ）が下る！",
+  "ui.more_iss.freischutz.penalty_trigger": "悪魔への報いを受けている間は、新たに契約を結ぶことはできない。",
+  "ui.more_iss.freischutz.exhausted_penalty": "魔弾を撃ち尽くした。悪魔からの報いが下る。",
+  "ui.more_iss.freischutz.bypass_penalty": "§c契約の踏み倒しは許されない。悪魔の絶対的な執行が下った。",
+  "ui.more_iss.freischutz.illegal_remove_penalty": "§c「報い」の拒絶、あるいは解除は許されない。悪魔の絶対的な執行が下った。",
   "effect.more_iss.demonic_covenant": "悪魔の契約",
   "effect.more_iss.retribution": "報い"
 }

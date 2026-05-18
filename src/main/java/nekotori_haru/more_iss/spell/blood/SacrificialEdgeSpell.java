@@ -18,7 +18,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-@AutoSpellConfig
 public class SacrificialEdgeSpell extends AbstractSpell {
 
     private final ResourceLocation spellId = new ResourceLocation("more_iss", "sacrificial_edge");
@@ -39,7 +38,8 @@ public class SacrificialEdgeSpell extends AbstractSpell {
         this.baseSpellPower = 0;
         this.spellPowerPerLevel = 0;
         this.castTime = 0;
-        this.baseManaCost = 100;
+        this.baseManaCost = 100
+        ;
     }
 
     private double getCustomSpellPower(int spellLevel) {

@@ -8,5 +8,7 @@
   "ui.more_iss.damage_multiplier": "Melee Damage Bonus: %s%%",
   "ui.more_iss.penetration_ratio": "Armor Penetration: %s%%",
   "container.more_iss.arcane_anvil_crafting": "Scroll Combination",
-  "spell.more_iss.overburst_blood.guide": "Combines the shock of Charge and the toll of Heartstop to evoke a crimson explosion.\nInstantly multiplies melee damage and enables attacks to pierce all defenses."
+  "spell.more_iss.overburst_blood.guide": "Combines the shock of Charge and the toll of Heartstop to evoke a crimson explosion.\nInstantly multiplies melee damage and enables attacks to pierce all defenses.",
+  "death.attack.more_iss.disintegration": "%1$s was disintegrated into nothingness",
+  "death.attack.more_iss.disintegration.player": "%1$s was dissolved by %2$s"
 }
