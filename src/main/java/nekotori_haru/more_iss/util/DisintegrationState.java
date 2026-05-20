@@ -4,6 +4,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
+import net.minecraft.network.protocol.game.ClientboundEntityEventPacket;
 import net.minecraft.network.protocol.game.ClientboundExplodePacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -19,6 +20,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingEvent;
+import net.minecraftforge.event.entity.living.LivingHealEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import nekotori_haru.more_iss.spell.eldritch.DisintegrationSpell;
 import org.joml.Vector3f;
@@ -41,7 +43,18 @@ public class DisintegrationState {
         if (initialized) return;
         MinecraftForge.EVENT_BUS.addListener(EventPriority.NORMAL, DisintegrationState::onLivingTick);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGH, DisintegrationState::onLivingDeath);
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, DisintegrationState::onLivingHeal);
         initialized = true;
+    }
+
+    private static void onLivingHeal(LivingHealEvent event) {
+        LivingEntity entity = event.getEntity();
+        if (entity == null || entity.level().isClientSide()) return;
+
+        if (isDisintegrating(entity.getUUID())) {
+            event.setCanceled(true);
+            event.setAmount(0.0F);
+        }
     }
 
     public static boolean isDisintegrating(UUID uuid) {
@@ -83,6 +96,8 @@ public class DisintegrationState {
 
         DAMAGE_PHASES.put(targetUUID, entry);
         DisintegrationTargetManager.lock(targetUUID, level.getEntity(targetUUID));
+
+        RECOVERY_BLACKLIST.put(targetUUID, System.currentTimeMillis());
     }
 
     public static void stopDamagePhase(UUID targetUUID) {
@@ -92,6 +107,7 @@ public class DisintegrationState {
         }
         DAMAGE_PHASES.remove(targetUUID);
         DisintegrationTargetManager.release(targetUUID);
+        RECOVERY_BLACKLIST.remove(targetUUID);
     }
 
     private static void onLivingDeath(LivingDeathEvent event) {
@@ -104,11 +120,14 @@ public class DisintegrationState {
         if (freeze != null) removeMultiLightBlock(freeze.lastLightPos);
         FROZEN_TARGETS.remove(uuid);
 
-        if (DAMAGE_PHASES.containsKey(uuid)) {
+        DamagePhaseEntry entry = DAMAGE_PHASES.get(uuid);
+        if (entry != null) {
+            if (entry.isEnding) return;
+            entry.isEnding = true;
+
             ServerLevel level = (ServerLevel) entity.level();
             triggerFinalExplosion(level, entity.getX(), entity.getY() + (entity.getBbHeight() / 2), entity.getZ());
             stopDamagePhase(uuid);
-            RECOVERY_BLACKLIST.remove(uuid);
         }
     }
 
@@ -179,28 +198,39 @@ public class DisintegrationState {
         DamagePhaseEntry entry = DAMAGE_PHASES.get(uuid);
         if (entry == null) return;
 
-        if (entity.isRemoved()) {
+        // すでに終了処理（死亡・タイムアップ）が走っているなら重複動作を防ぐために完全スキップ
+        if (entry.isEnding) return;
+
+        if (entity.isRemoved() || entity.isDeadOrDying()) {
+            entry.isEnding = true;
             triggerFinalExplosion(level, entity.getX(), entity.getY() + (entity.getBbHeight() / 2), entity.getZ());
             stopDamagePhase(uuid);
-            RECOVERY_BLACKLIST.remove(uuid);
             return;
         }
 
         entry.elapsedTicks++;
         if (entry.elapsedTicks > entry.maxTicks) {
+            // 🌟 タイムアップ（10秒経過）：無敵の「終焉の守護者」を強制リムーブするCルート処理
+            entry.isEnding = true;
+
+            // ① 最終爆発の演出パケットを周囲に飛ばす
             triggerFinalExplosion(level, entity.getX(), entity.getY() + (entity.getBbHeight() / 2), entity.getZ());
+
+            // ② クライアント側へ死亡アニメーション（Status: 3）を強制送信して倒れる演出を再生
+            level.getChunkSource().broadcastAndSend(entity, new ClientboundEntityEventPacket(entity, (byte) 3));
+
+            // ③ サーバー側でHP計算やMODの無敵キャンセルを完全に無視して世界から強制排除（KILLED指定）
+            entity.remove(Entity.RemovalReason.KILLED);
+
             stopDamagePhase(uuid);
-            RECOVERY_BLACKLIST.remove(uuid);
             return;
         }
 
         updateMultiLightSource(level, entry.lastLightPos, entity);
-
         spawnMegaDisintegrationBeam(level, entity.getX(), entity.getY(), entity.getZ(), entry.elapsedTicks);
-
-        // 🌟 改良版：固定XZから一斉にY+15まで突き抜ける薙ぎ払い光柱
         spawnRandomVerticalSweepParticles(level, entity.getX(), entity.getY(), entity.getZ(), entity.getRandom());
 
+        // 元の割合ダメージ加速ロジック（0.003f から毎tick 0.0003f ずつ増加）
         float basePercent = 0.003f;
         float growthPercent = 0.0003f;
         float currentPercent = basePercent + (entry.elapsedTicks * growthPercent);
@@ -210,6 +240,10 @@ public class DisintegrationState {
 
         DamageSource source = buildSource(level, entry);
 
+        // メインターゲットへ割合ダメージ
+        DisintegrationDamageUtil.dealTrueDamage(entity, source, damage, true);
+
+        // 周囲の巻き込み判定
         double radius = 3.0;
         AABB searchArea = entity.getBoundingBox().inflate(radius);
         List<LivingEntity> targetsInRange = level.getEntitiesOfClass(LivingEntity.class, searchArea);
@@ -227,6 +261,7 @@ public class DisintegrationState {
         }
 
         RECOVERY_BLACKLIST.keySet().removeIf(id -> {
+            if (DAMAGE_PHASES.containsKey(id)) return false;
             Entity e = level.getEntity(id);
             return !(e instanceof LivingEntity le) || le.isDeadOrDying() || !targetsInRange.contains(le);
         });
@@ -348,31 +383,24 @@ public class DisintegrationState {
         }
     }
 
-    /**
-     * 🛠️ 改良：XZ軸をランダムに固定した上で、Y+15マスまで0.4ブロック刻みで「一斉に」粒子を直列設置する
-     */
     private static void spawnRandomVerticalSweepParticles(ServerLevel level, double cx, double cy, double cz, net.minecraft.util.RandomSource random) {
-        // 1tickあたりに生成する「光柱」の本数（負荷とハデさのバランスをとって3本。もっと増やしてもOKです）
-        int pillarCount = 3;
+        int pillarCount = 2;
 
         for (int p = 0; p < pillarCount; p++) {
-            // ① ドーナツ範囲（1.5〜2.5）内のランダムなXZ座標を「完全に固定」
             double randomRadius = 1.5 + (random.nextDouble() * 1.0);
             double randomAngle = random.nextDouble() * 2.0 * Math.PI;
 
             double fixedX = cx + randomRadius * Math.cos(randomAngle);
             double fixedZ = cz + randomRadius * Math.sin(randomAngle);
 
-            // ② 固定されたXZから、Y+15の高さまで「0.4マス刻み」の等間隔ループを回して一斉噴出
-            double step = 0.4;
+            double step = 0.7;
             double maxHeight = 15.0;
 
             for (double h = 0; h < maxHeight; h += step) {
-                double targetY = cy + h;
+                if (random.nextFloat() > 0.75f) continue;
 
-                // count=1 にして完全に動きをその場に固定（スピード0）
-                // これにより、XZが完全に固定された綺麗な「直線の白刃の柱」が1回のtickで一気に現れます。
-                level.sendParticles(ParticleTypes.SWEEP_ATTACK, fixedX, targetY, fixedZ, 1, 0.0, 0.0, 0.0, 0.0);
+                double targetY = cy + h;
+                level.sendParticles(ParticleTypes.SWEEP_ATTACK, fixedX, targetY, fixedZ, 0, 0.0, 0.0, 0.0, 0.0);
             }
         }
     }
@@ -439,6 +467,7 @@ public class DisintegrationState {
         final float baseDamage;
         final ServerLevel level;
         int elapsedTicks = 0;
+        boolean isEnding = false; // 重複終了処理・ドロップ無限増殖を防ぐガードフラグ
         final MultiLightLocation lastLightPos = new MultiLightLocation();
 
         DamagePhaseEntry(UUID casterUUID, int maxTicks, float baseDamage, ServerLevel level) {
