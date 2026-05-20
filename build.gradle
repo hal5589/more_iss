@@ -145,6 +145,13 @@ repositories {
 }
 
 dependencies {
+    // 1. 最優先でマイクラ本体と Forge を読み込む
+    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+
+    // 2. Mixinのアノテーションプロセッサ（refmap生成エンジン）
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+
+    // 3. 外部依存Mod群（重複していたIron's Spellsを1つに統合）
     implementation fg.deobf("curse.maven:irons-spells-n-spellbooks-855414:7907340")
     implementation fg.deobf("curse.maven:ironslib-1492763:7907335")
     implementation fg.deobf("curse.maven:curios-309927:6418456")
@@ -157,19 +164,13 @@ dependencies {
     implementation fg.deobf("curse.maven:jei-238222:7391695")
     implementation fg.deobf("curse.maven:dummy-225738:6860192")
     implementation fg.deobf("curse.maven:moonlib-499980:8076692")
-    //implementation fg.deobf("curse.maven:fe-1420337:7642083")
     implementation fg.deobf("curse.maven:endlib-1471165:8026953")
     implementation fg.deobf("curse.maven:slash-241596:4937125")
     implementation fg.deobf("curse.maven:goety-586095:8087429")
     implementation fg.deobf("curse.maven:patchouli-306770:7731017")
+
     compileOnly fg.deobf("mezz.jei:jei-1.20.1-forge-api:15.3.0.4")
     runtimeOnly fg.deobf("mezz.jei:jei-1.20.1-forge:15.3.0.4")
-}
-dependencies {
-    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
-    implementation fg.deobf("curse.maven:irons-spells-n-spellbooks-855414:7907340")
-
-    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 }
 
 tasks.named('processResources', ProcessResources).configure {

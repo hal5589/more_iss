@@ -12,7 +12,7 @@ import nekotori_haru.more_iss.spell.holy.ProvidentialConduitSpell;
 import nekotori_haru.more_iss.spell.eldritch.SoulLinkSpell;
 import nekotori_haru.more_iss.spell.blood.SacrificialEdgeSpell;
 import nekotori_haru.more_iss.spell.ice.AbsoluteZeroSpell;
-import nekotori_haru.more_iss.spell.eldritch.DisintegrationSpell; // 新しく作成するスペルをインポート
+import nekotori_haru.more_iss.spell.eldritch.DisintegrationSpell;
 import nekotori_haru.more_iss.util.DisintegrationState;
 import nekotori_haru.more_iss.util.DisintegrationTargetManager;
 import net.minecraft.core.registries.Registries;
@@ -24,6 +24,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
@@ -60,7 +61,7 @@ public class More_iss {
     public static final RegistryObject<AbstractSpell> SOUL_LINK = SPELLS.register("soul_link", SoulLinkSpell::new);
     public static final RegistryObject<AbstractSpell> ABSOLUTE_ZERO = SPELLS.register("absolute_zero", AbsoluteZeroSpell::new);
 
-    // 【追加】崩壊魔法（Fantasy Ending）本体のレジストリ登録
+    // 崩壊魔法本体のレジストリ登録
     public static final RegistryObject<AbstractSpell> DISINTEGRATION = SPELLS.register("disintegration", DisintegrationSpell::new);
 
     // Forgeへのイベントバス登録コンストラクタ
@@ -77,10 +78,9 @@ public class More_iss {
         SPELLS.register(modEventBus);
         ENTITIES.register(modEventBus);
 
-        // 【追加】崩壊魔法システム裏側のイベントハンドラーを初期化・常駐化
+        // 🌟【維持】崩壊魔法システム裏側のイベントハンドラーを初期化・常駐化
         DisintegrationState.init();
         DisintegrationTargetManager.init();
 
-        LOGGER.info("More_ISS Registries have been successfully initialized!");
     }
 }

@@ -1,20 +1,28 @@
 package nekotori_haru.more_iss.util;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
 import net.minecraft.network.protocol.game.ClientboundEntityEventPacket;
 import net.minecraft.network.protocol.game.ClientboundExplodePacket;
+import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.entity.EntityTickList;
+import net.minecraft.world.level.storage.loot.LootParams;
+import net.minecraft.world.level.storage.loot.LootTable;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.MinecraftForge;
@@ -22,9 +30,11 @@ import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.event.entity.living.LivingHealEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
+import net.minecraftforge.fml.ModList;
 import nekotori_haru.more_iss.spell.eldritch.DisintegrationSpell;
 import org.joml.Vector3f;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -34,10 +44,21 @@ import java.util.concurrent.ConcurrentHashMap;
 public class DisintegrationState {
 
     private static final Map<UUID, DamagePhaseEntry> DAMAGE_PHASES = new ConcurrentHashMap<>();
-    private static final Map<UUID, Long> RECOVERY_BLACKLIST = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<UUID, Long> BLACKLIST = new ConcurrentHashMap<>();
     private static final Map<UUID, FrozenTargetEntry> FROZEN_TARGETS = new ConcurrentHashMap<>();
 
+    private static Method actuallyHurtMethod = null;
     private static boolean initialized = false;
+
+    static {
+        try {
+            // 🌟 1.20.1製品版の本名 m_6475_ を動的に取得
+            actuallyHurtMethod = LivingEntity.class.getDeclaredMethod("m_6475_", DamageSource.class, float.class);
+            actuallyHurtMethod.setAccessible(true);
+        } catch (Throwable e) {
+            e.printStackTrace();
+        }
+    }
 
     public static synchronized void init() {
         if (initialized) return;
@@ -47,18 +68,16 @@ public class DisintegrationState {
         initialized = true;
     }
 
-    private static void onLivingHeal(LivingHealEvent event) {
-        LivingEntity entity = event.getEntity();
-        if (entity == null || entity.level().isClientSide()) return;
-
-        if (isDisintegrating(entity.getUUID())) {
-            event.setCanceled(true);
-            event.setAmount(0.0F);
-        }
+    public static boolean isDisintegrating(UUID uuid) {
+        return BLACKLIST.containsKey(uuid) || DAMAGE_PHASES.containsKey(uuid);
     }
 
-    public static boolean isDisintegrating(UUID uuid) {
-        return RECOVERY_BLACKLIST.containsKey(uuid);
+    public static void addToBlacklist(UUID uuid) {
+        BLACKLIST.put(uuid, System.currentTimeMillis());
+    }
+
+    public static void removeFromBlacklist(UUID uuid) {
+        BLACKLIST.remove(uuid);
     }
 
     public static void startCastingPhase(LivingEntity caster, LivingEntity initialTarget, double radius) {
@@ -85,19 +104,30 @@ public class DisintegrationState {
     }
 
     public static void startDamagePhase(UUID targetUUID, UUID casterUUID, int maxTicks, float baseDamage, ServerLevel level) {
-        int extendedTicks = 600;
-        DamagePhaseEntry entry = new DamagePhaseEntry(casterUUID, extendedTicks, baseDamage, level);
+        Entity targetEntity = level.getEntity(targetUUID);
+        if (targetEntity == null) return;
+
+        double lx = targetEntity.getX();
+        double ly = targetEntity.getY();
+        double lz = targetEntity.getZ();
 
         FrozenTargetEntry freeze = FROZEN_TARGETS.get(targetUUID);
         if (freeze != null) {
+            lx = freeze.lockX;
+            ly = freeze.initialY;
+            lz = freeze.lockZ;
+        }
+
+        DamagePhaseEntry entry = new DamagePhaseEntry(casterUUID, maxTicks, baseDamage, level, lx, ly, lz);
+
+        if (freeze != null) {
             entry.lastLightPos.copyFrom(freeze.lastLightPos);
+            entry.currentHoverOffset = freeze.currentHoverOffset;
         }
         FROZEN_TARGETS.remove(targetUUID);
 
         DAMAGE_PHASES.put(targetUUID, entry);
-        DisintegrationTargetManager.lock(targetUUID, level.getEntity(targetUUID));
-
-        RECOVERY_BLACKLIST.put(targetUUID, System.currentTimeMillis());
+        addToBlacklist(targetUUID);
     }
 
     public static void stopDamagePhase(UUID targetUUID) {
@@ -106,8 +136,7 @@ public class DisintegrationState {
             removeMultiLightBlock(entry.lastLightPos);
         }
         DAMAGE_PHASES.remove(targetUUID);
-        DisintegrationTargetManager.release(targetUUID);
-        RECOVERY_BLACKLIST.remove(targetUUID);
+        removeFromBlacklist(targetUUID);
     }
 
     private static void onLivingDeath(LivingDeathEvent event) {
@@ -131,6 +160,13 @@ public class DisintegrationState {
         }
     }
 
+    private static void onLivingHeal(LivingHealEvent event) {
+        if (event.getEntity() != null && isDisintegrating(event.getEntity().getUUID())) {
+            event.setCanceled(true);
+            event.setAmount(0.0F);
+        }
+    }
+
     private static void onLivingTick(LivingEvent.LivingTickEvent event) {
         LivingEntity entity = event.getEntity();
         if (entity.level().isClientSide()) return;
@@ -138,19 +174,13 @@ public class DisintegrationState {
         UUID uuid = entity.getUUID();
         ServerLevel level = (ServerLevel) entity.level();
 
-        // ─────────────────────────────────────────────────────────────────
-        // ── 1. 詠唱中フェーズ
-        // ─────────────────────────────────────────────────────────────────
+        // ── 【演出A】 詠唱中：位置固定 ──
         if (FROZEN_TARGETS.containsKey(uuid)) {
             FrozenTargetEntry freeze = FROZEN_TARGETS.get(uuid);
             Entity caster = level.getEntity(freeze.casterUUID);
 
             if (caster instanceof LivingEntity livingCaster && !caster.isRemoved()) {
-
-                if (freeze.currentHoverOffset < 1.0F) {
-                    freeze.currentHoverOffset += 0.05F;
-                    if (freeze.currentHoverOffset > 1.0F) freeze.currentHoverOffset = 1.0F;
-                }
+                if (freeze.currentHoverOffset < 1.0F) freeze.currentHoverOffset += 0.05F;
                 double targetY = freeze.initialY + freeze.currentHoverOffset;
 
                 entity.teleportTo(freeze.lockX, targetY, freeze.lockZ);
@@ -162,44 +192,24 @@ public class DisintegrationState {
                     mob.setTarget(livingCaster);
                 }
 
-                double dx = caster.getX() - entity.getX();
-                double dy = (caster.getY() + caster.getEyeHeight()) - (entity.getY() + entity.getEyeHeight());
-                double dz = caster.getZ() - entity.getZ();
-                double xzLen = Math.sqrt(dx * dx + dz * dz);
-                float yaw = (float) (Math.atan2(dz, dx) * 180.0D / Math.PI) - 90.0F;
-                float pitch = (float) -(Math.atan2(dy, xzLen) * 180.0D / Math.PI);
-                entity.setYRot(yaw); entity.setXRot(pitch); entity.setYHeadRot(yaw);
-                entity.yRotO = yaw; entity.xRotO = pitch; entity.yBodyRot = yaw;
-
+                lockLookAtCaster(entity, caster);
                 updateMultiLightSource(level, freeze.lastLightPos, entity);
 
                 long time = level.getGameTime();
-                double baseGroundY = freeze.initialY;
-                double currentEntityY = entity.getY();
-                double headY = currentEntityY + entity.getBbHeight();
                 double rotateAngle = time * 0.05;
-
-                spawnGeometricGradientCircle(level, entity.getX(), baseGroundY + 0.1, entity.getZ(), 3.8, rotateAngle);
-                spawnSparsePropertyRing(level, entity.getX(), currentEntityY + 0.2, entity.getZ(), 3.0, -rotateAngle, "SOUL_FLAME");
-                spawnSparsePropertyRing(level, entity.getX(), currentEntityY + (entity.getBbHeight() / 2), entity.getZ(), 2.5, rotateAngle * 1.2, "FIRE_AND_SWEEP");
-                spawnSparsePropertyRing(level, entity.getX(), headY + 0.3, entity.getZ(), 2.0, -rotateAngle * 0.8, "WHITE");
-                spawnSparsePropertyRing(level, entity.getX(), headY + 2.0, entity.getZ(), 1.5, rotateAngle * 1.5, "SOUL_PARTICLE");
-                spawnSparsePropertyRing(level, entity.getX(), headY + 4.0, entity.getZ(), 1.0, -rotateAngle * 2.0, "EXPLOSION");
-
+                spawnGeometricGradientCircle(level, entity.getX(), freeze.initialY + 0.1, entity.getZ(), 3.8, rotateAngle);
+                spawnSparsePropertyRing(level, entity.getX(), entity.getY() + 0.2, entity.getZ(), 3.0, -rotateAngle, "SOUL_FLAME");
+                spawnSparsePropertyRing(level, entity.getX(), entity.getY() + (entity.getBbHeight() / 2), entity.getZ(), 2.5, rotateAngle * 1.2, "FIRE_AND_SWEEP");
+                spawnSparsePropertyRing(level, entity.getX(), entity.getY() + entity.getBbHeight() + 0.3, entity.getZ(), 2.0, -rotateAngle * 0.8, "WHITE");
             } else {
                 removeMultiLightBlock(freeze.lastLightPos);
                 FROZEN_TARGETS.remove(uuid);
             }
         }
 
-        // ─────────────────────────────────────────────────────────────────
-        // ── 2. 発動中（ダメージ・昇華）フェーズ
-        // ─────────────────────────────────────────────────────────────────
+        // ── 【演出B & ダメージ】 本発動：強力な持続位置固定 ──
         DamagePhaseEntry entry = DAMAGE_PHASES.get(uuid);
-        if (entry == null) return;
-
-        // すでに終了処理（死亡・タイムアップ）が走っているなら重複動作を防ぐために完全スキップ
-        if (entry.isEnding) return;
+        if (entry == null || entry.isEnding) return;
 
         if (entity.isRemoved() || entity.isDeadOrDying()) {
             entry.isEnding = true;
@@ -208,134 +218,179 @@ public class DisintegrationState {
             return;
         }
 
+        // 本発動中も「絶対に」位置を完全固定（改良1）
+        Entity caster = level.getEntity(entry.casterUUID);
+        if (caster instanceof LivingEntity) {
+            if (entry.currentHoverOffset < 1.0F) entry.currentHoverOffset += 0.05F;
+            double targetY = entry.lockY + entry.currentHoverOffset;
+
+            entity.teleportTo(entry.lockX, targetY, entry.lockZ);
+            entity.setDeltaMovement(Vec3.ZERO);
+            entity.fallDistance = 0.0F;
+            lockLookAtCaster(entity, caster);
+        }
+
         entry.elapsedTicks++;
+
+        // ⏰ 【タイムアップ時】処刑
         if (entry.elapsedTicks > entry.maxTicks) {
-            // 🌟 タイムアップ（10秒経過）：無敵の「終焉の守護者」を強制リムーブするCルート処理
             entry.isEnding = true;
-
-            // ① 最終爆発の演出パケットを周囲に飛ばす
             triggerFinalExplosion(level, entity.getX(), entity.getY() + (entity.getBbHeight() / 2), entity.getZ());
-
-            // ② クライアント側へ死亡アニメーション（Status: 3）を強制送信して倒れる演出を再生
             level.getChunkSource().broadcastAndSend(entity, new ClientboundEntityEventPacket(entity, (byte) 3));
-
-            // ③ サーバー側でHP計算やMODの無敵キャンセルを完全に無視して世界から強制排除（KILLED指定）
-            entity.remove(Entity.RemovalReason.KILLED);
-
+            TrueHealthManipulator.forceSetTrueHealth(entity, 0.0f);
+            executeTrueDeath(level, entity);
             stopDamagePhase(uuid);
             return;
         }
 
         updateMultiLightSource(level, entry.lastLightPos, entity);
         spawnMegaDisintegrationBeam(level, entity.getX(), entity.getY(), entity.getZ(), entry.elapsedTicks);
-        spawnRandomVerticalSweepParticles(level, entity.getX(), entity.getY(), entity.getZ(), entity.getRandom());
 
-        // 元の割合ダメージ加速ロジック（0.003f から毎tick 0.0003f ずつ増加）
-        float basePercent = 0.003f;
-        float growthPercent = 0.0003f;
-        float currentPercent = basePercent + (entry.elapsedTicks * growthPercent);
-
-        float damage = entity.getMaxHealth() * currentPercent;
-        if (damage < 1.0f) damage = 1.0f;
+        // 📐 ダメージ計算
+        float currentPercent = 0.003f + (entry.elapsedTicks * 0.0003f);
+        float damageAmount = entity.getMaxHealth() * currentPercent;
+        if (damageAmount < 1.0f) damageAmount = 1.0f;
 
         DamageSource source = buildSource(level, entry);
 
-        // メインターゲットへ割合ダメージ
-        DisintegrationDamageUtil.dealTrueDamage(entity, source, damage, true);
+        // 無敵時間（iFrames）を毎チック強制粉砕（改良2）
+        entity.invulnerableTime = 0;
+        entity.hurtDuration = 0;
 
-        // 周囲の巻き込み判定
-        double radius = 3.0;
-        AABB searchArea = entity.getBoundingBox().inflate(radius);
-        List<LivingEntity> targetsInRange = level.getEntitiesOfClass(LivingEntity.class, searchArea);
-
-        for (LivingEntity nearbyTarget : targetsInRange) {
-            if (nearbyTarget.isDeadOrDying() || nearbyTarget.getUUID().equals(entry.casterUUID)) continue;
-
-            UUID targetUUID = nearbyTarget.getUUID();
-            RECOVERY_BLACKLIST.put(targetUUID, System.currentTimeMillis());
-
-            float nearbyDamage = nearbyTarget.getMaxHealth() * currentPercent;
-            if (nearbyDamage < 1.0f) nearbyDamage = 1.0f;
-
-            DisintegrationDamageUtil.dealTrueDamage(nearbyTarget, source, nearbyDamage, true);
+        // actuallyHurt を直接叩いて他MODの盾やHPロックを完全無視（改良3）
+        if (actuallyHurtMethod != null) {
+            try {
+                actuallyHurtMethod.invoke(entity, source, damageAmount);
+            } catch (Throwable t) {
+                entity.hurt(source, damageAmount);
+            }
+        } else {
+            entity.hurt(source, damageAmount);
         }
 
-        RECOVERY_BLACKLIST.keySet().removeIf(id -> {
-            if (DAMAGE_PHASES.containsKey(id)) return false;
-            Entity e = level.getEntity(id);
-            return !(e instanceof LivingEntity le) || le.isDeadOrDying() || !targetsInRange.contains(le);
-        });
+        // 周囲への拡散
+        AABB searchArea = entity.getBoundingBox().inflate(3.0);
+        List<LivingEntity> targetsInRange = level.getEntitiesOfClass(LivingEntity.class, searchArea);
+        for (LivingEntity nearby : targetsInRange) {
+            if (nearby.isDeadOrDying() || nearby.getUUID().equals(entry.casterUUID) || nearby.getUUID().equals(uuid)) continue;
+
+            nearby.invulnerableTime = 0;
+            if (actuallyHurtMethod != null) {
+                try { actuallyHurtMethod.invoke(nearby, source, nearby.getMaxHealth() * currentPercent); }
+                catch (Throwable t) { nearby.hurt(source, nearby.getMaxHealth() * currentPercent); }
+            } else {
+                nearby.hurt(source, nearby.getMaxHealth() * currentPercent);
+            }
+        }
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // ── 各種ギミック制御エンジン
-    // ─────────────────────────────────────────────────────────────────
+    private static void lockLookAtCaster(LivingEntity entity, Entity caster) {
+        double dx = caster.getX() - entity.getX();
+        double dy = (caster.getY() + caster.getEyeHeight()) - (entity.getY() + entity.getEyeHeight());
+        double dz = caster.getZ() - entity.getZ();
+        double xzLen = Math.sqrt(dx * dx + dz * dz);
+        float yaw = (float) (Math.atan2(dz, dx) * 180.0D / Math.PI) - 90.0F;
+        float pitch = (float) -(Math.atan2(dy, xzLen) * 180.0D / Math.PI);
+        entity.setYRot(yaw);
+        entity.setXRot(pitch);
+        entity.setYHeadRot(yaw);
+    }
+
+    public static void executeTrueDeath(ServerLevel level, LivingEntity entity) {
+        boolean isFEInstalled = ModList.get().isLoaded("fantasy_ending");
+
+        try {
+            if (isFEInstalled) {
+                String uuidStr = entity.getUUID().toString();
+                var server = level.getServer();
+                var source = server.createCommandSourceStack().withPermission(4).withSuppressedOutput();
+                server.getCommands().performPrefixedCommand(source, "fantasy_ending entity forceSetHealth " + uuidStr + " 0.0");
+                server.getCommands().performPrefixedCommand(source, "fantasy_ending entity softGetHealthKill " + uuidStr);
+                server.getCommands().performPrefixedCommand(source, "fantasy_ending entity forceKill " + uuidStr);
+            } else {
+                try {
+                    java.lang.reflect.Field healthIdField = LivingEntity.class.getDeclaredField("DATA_HEALTH_ID");
+                    healthIdField.setAccessible(true);
+                    @SuppressWarnings("unchecked")
+                    EntityDataAccessor<Float> healthId = (EntityDataAccessor<Float>) healthIdField.get(null);
+
+                    SynchedEntityDataUtil.forceSet(entity.getEntityData(), healthId, 0.0f);
+                } catch (Throwable e) {
+                    entity.setHealth(0.0f);
+                }
+            }
+
+            forceDropItems(level, entity);
+            entity.remove(Entity.RemovalReason.KILLED);
+
+            // 🌟 修正：一般クラスになったAccessorを静的呼び出ししてメモリから抹消
+            EntityTickList tickList = nekotori_haru.more_iss.mixin.ServerLevelAccessor.getEntityTickList(level);
+            if (tickList != null) {
+                int entityId = entity.getId();
+                var activeMap = nekotori_haru.more_iss.mixin.EntityTickListAccessor.getActive(tickList);
+                var passiveMap = nekotori_haru.more_iss.mixin.EntityTickListAccessor.getPassive(tickList);
+                var iteratedMap = nekotori_haru.more_iss.mixin.EntityTickListAccessor.getIterated(tickList);
+
+                if (activeMap != null) activeMap.remove(entityId);
+                if (passiveMap != null) passiveMap.remove(entityId);
+                if (iteratedMap != null) iteratedMap.remove(entityId);
+            }
+
+            try {
+                java.lang.reflect.Field removalReasonField = Entity.class.getDeclaredField("removalReason");
+                removalReasonField.setAccessible(true);
+                removalReasonField.set(entity, Entity.RemovalReason.KILLED);
+            } catch (Throwable e) {
+                entity.discard();
+            }
+
+        } catch (Throwable t) {
+            t.printStackTrace();
+        }
+    }
+
+    private static void forceDropItems(ServerLevel level, LivingEntity entity) {
+        LootTable lootTable = level.getServer().getLootData().getLootTable(entity.getLootTable());
+        LootParams params = new LootParams.Builder(level)
+                .withParameter(LootContextParams.THIS_ENTITY, entity)
+                .withParameter(LootContextParams.ORIGIN, entity.position())
+                .create(LootContextParamSets.ENTITY);
+
+        lootTable.getRandomItems(params).forEach(stack -> {
+            if (!stack.isEmpty()) {
+                ItemEntity item = new ItemEntity(level, entity.getX(), entity.getY(), entity.getZ(), stack);
+                level.addFreshEntity(item);
+            }
+        });
+    }
 
     private static void updateMultiLightSource(ServerLevel level, MultiLightLocation loc, LivingEntity entity) {
         BlockPos basePos = BlockPos.containing(entity.getX(), entity.getY() + 0.1, entity.getZ());
         BlockPos bodyPos = BlockPos.containing(entity.getX(), entity.getY() + (entity.getBbHeight() / 2), entity.getZ());
-        BlockPos headPos = BlockPos.containing(entity.getX(), entity.getY() + entity.getBbHeight() + 0.2, entity.getZ());
-
-        if (basePos.equals(loc.lastBase) && bodyPos.equals(loc.lastBody) && headPos.equals(loc.lastHead)) return;
-
+        if (basePos.equals(loc.lastBase) && bodyPos.equals(loc.lastBody)) return;
         removeMultiLightBlock(loc);
 
         BlockState maxLightState = Blocks.LIGHT.defaultBlockState().setValue(BlockStateProperties.LEVEL, 15);
-
-        if (level.getBlockState(basePos).isAir() || level.getBlockState(basePos).is(Blocks.LIGHT)) {
-            level.setBlock(basePos, maxLightState, 3);
-            loc.lastBase = basePos;
-        }
-        if (level.getBlockState(bodyPos).isAir() || level.getBlockState(bodyPos).is(Blocks.LIGHT)) {
-            level.setBlock(bodyPos, maxLightState, 3);
-            loc.lastBody = bodyPos;
-        }
-        if (level.getBlockState(headPos).isAir() || level.getBlockState(headPos).is(Blocks.LIGHT)) {
-            level.setBlock(headPos, maxLightState, 3);
-            loc.lastHead = headPos;
-        }
-
+        if (level.getBlockState(basePos).isAir()) { level.setBlock(basePos, maxLightState, 3); loc.lastBase = basePos; }
+        if (level.getBlockState(bodyPos).isAir()) { level.setBlock(bodyPos, maxLightState, 3); loc.lastBody = bodyPos; }
         loc.level = level;
     }
 
     private static void removeMultiLightBlock(MultiLightLocation loc) {
         if (loc == null || loc.level == null) return;
-
-        if (loc.lastBase != null && loc.level.getBlockState(loc.lastBase).is(Blocks.LIGHT)) {
-            loc.level.setBlock(loc.lastBase, Blocks.AIR.defaultBlockState(), 3);
-        }
-        if (loc.lastBody != null && loc.level.getBlockState(loc.lastBody).is(Blocks.LIGHT)) {
-            loc.level.setBlock(loc.lastBody, Blocks.AIR.defaultBlockState(), 3);
-        }
-        if (loc.lastHead != null && loc.level.getBlockState(loc.lastHead).is(Blocks.LIGHT)) {
-            loc.level.setBlock(loc.lastHead, Blocks.AIR.defaultBlockState(), 3);
-        }
-
-        loc.lastBase = null;
-        loc.lastBody = null;
-        loc.lastHead = null;
+        if (loc.lastBase != null && loc.level.getBlockState(loc.lastBase).is(Blocks.LIGHT)) loc.level.setBlock(loc.lastBase, Blocks.AIR.defaultBlockState(), 3);
+        if (loc.lastBody != null && loc.level.getBlockState(loc.lastBody).is(Blocks.LIGHT)) loc.level.setBlock(loc.lastBody, Blocks.AIR.defaultBlockState(), 3);
+        loc.lastBase = null; loc.lastBody = null;
     }
 
     private static void spawnGeometricGradientCircle(ServerLevel level, double cx, double cy, double cz, double r, double angleOffset) {
         int points = 64;
         for (int i = 0; i < points; i++) {
             double angle = ((i * 2 * Math.PI) / points) + angleOffset;
-            double x = cx + r * Math.cos(angle);
-            double z = cz + r * Math.sin(angle);
-
+            double x = cx + r * Math.cos(angle); double z = cz + r * Math.sin(angle);
             float factor = (float) ((Math.cos(angle) + 1.0) / 2.0);
-            float red = factor;
-            float green = 1.0f - Math.abs(factor - 0.5f) * 2.0f;
-            float blue = 1.0f - factor;
-
-            DustParticleOptions coloredDust = new DustParticleOptions(new Vector3f(red, green, blue), 1.2f);
+            DustParticleOptions coloredDust = new DustParticleOptions(new Vector3f(factor, 1.0f - Math.abs(factor - 0.5f) * 2.0f, 1.0f - factor), 1.2f);
             level.sendParticles(coloredDust, x, cy, z, 1, 0, 0, 0, 0);
-
-            if (i % 8 == 0) {
-                double lengthFactor = (double) (i % 32) / 32.0 * r;
-                level.sendParticles(coloredDust, cx + lengthFactor * Math.cos(angleOffset), cy, cz + lengthFactor * Math.sin(angleOffset), 1, 0, 0, 0, 0);
-                level.sendParticles(coloredDust, cx - lengthFactor * Math.cos(angleOffset), cy, cz - lengthFactor * Math.sin(angleOffset), 1, 0, 0, 0, 0);
-            }
         }
     }
 
@@ -343,152 +398,65 @@ public class DisintegrationState {
         int points = 32;
         for (int i = 0; i < points; i++) {
             if (i % 3 != 0) continue;
-
             double angle = ((i * 2 * Math.PI) / points) + angleOffset;
-            double x = cx + r * Math.cos(angle);
-            double z = cz + r * Math.sin(angle);
-
+            double x = cx + r * Math.cos(angle); double z = cz + r * Math.sin(angle);
             switch (type) {
                 case "SOUL_FLAME"    -> level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, x, cy, z, 1, 0, 0, 0, 0);
-                case "FIRE_AND_SWEEP" -> {
-                    level.sendParticles(ParticleTypes.FLAME, x, cy, z, 1, 0, 0, 0, 0);
-                    if (i % 6 == 0) {
-                        level.sendParticles(ParticleTypes.SWEEP_ATTACK, x, cy, z, 1, 0, 0, 0, 0);
-                    }
-                }
+                case "FIRE_AND_SWEEP" -> level.sendParticles(ParticleTypes.FLAME, x, cy, z, 1, 0, 0, 0, 0);
                 case "WHITE"         -> level.sendParticles(ParticleTypes.END_ROD, x, cy, z, 1, 0, 0, 0, 0);
-                case "SOUL_PARTICLE" -> level.sendParticles(ParticleTypes.SOUL, x, cy, z, 1, 0, 0.05, 0, 0.01);
-                case "EXPLOSION"     -> level.sendParticles(ParticleTypes.ELECTRIC_SPARK, x, cy, z, 1, 0, 0, 0, 0);
             }
         }
     }
 
     private static void spawnMegaDisintegrationBeam(ServerLevel level, double cx, double cy, double cz, int ticks) {
-        double radius = 3.5;
-        int basePoints = 48;
-        double speedOffset = ticks * 0.3;
-
+        double radius = 3.5; int basePoints = 48; double speedOffset = ticks * 0.3;
         for (int i = 0; i < basePoints; i++) {
             double angle = speedOffset + (i * (2 * Math.PI / basePoints));
-            double x = cx + radius * Math.cos(angle);
-            double z = cz + radius * Math.sin(angle);
-
+            double x = cx + radius * Math.cos(angle); double z = cz + radius * Math.sin(angle);
             level.sendParticles(ParticleTypes.END_ROD, x, cy, z, 0, 0.0, 3.5, 0.0, 0.5);
-            level.sendParticles(ParticleTypes.CRIT, x, cy, z, 0, 0.0, 3.2, 0.0, 0.5);
-
-            if (i % 2 == 0) {
-                level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, cx, cy, cz, 0, 0.0, 2.5, 0.0, 0.6);
-                level.sendParticles(ParticleTypes.FLAME, cx, cy, cz, 0, 0.0, 2.5, 0.0, 0.6);
-            }
-        }
-    }
-
-    private static void spawnRandomVerticalSweepParticles(ServerLevel level, double cx, double cy, double cz, net.minecraft.util.RandomSource random) {
-        int pillarCount = 2;
-
-        for (int p = 0; p < pillarCount; p++) {
-            double randomRadius = 1.5 + (random.nextDouble() * 1.0);
-            double randomAngle = random.nextDouble() * 2.0 * Math.PI;
-
-            double fixedX = cx + randomRadius * Math.cos(randomAngle);
-            double fixedZ = cz + randomRadius * Math.sin(randomAngle);
-
-            double step = 0.7;
-            double maxHeight = 15.0;
-
-            for (double h = 0; h < maxHeight; h += step) {
-                if (random.nextFloat() > 0.75f) continue;
-
-                double targetY = cy + h;
-                level.sendParticles(ParticleTypes.SWEEP_ATTACK, fixedX, targetY, fixedZ, 0, 0.0, 0.0, 0.0, 0.0);
-            }
         }
     }
 
     private static void triggerFinalExplosion(ServerLevel level, double x, double y, double z) {
         level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, x, y, z, 3, 0.5, 0.5, 0.5, 0.0);
-        level.sendParticles(ParticleTypes.SONIC_BOOM, x, y, z, 2, 0.2, 0.2, 0.2, 0.0);
         level.sendParticles(ParticleTypes.FLASH, x, y, z, 5, 1.0, 1.0, 1.0, 0.0);
-        level.sendParticles(ParticleTypes.LAVA, x, y, z, 40, 2.0, 2.0, 2.0, 0.5);
 
         AABB shakeArea = new AABB(x, y, z, x, y, z).inflate(32.0);
         List<ServerPlayer> players = level.getEntitiesOfClass(ServerPlayer.class, shakeArea);
-
-        List<BlockPos> dummyDestroyedBlocks = new ArrayList<>();
-        dummyDestroyedBlocks.add(BlockPos.containing(x, y, z));
-
-        ClientboundExplodePacket shakePacket = new ClientboundExplodePacket(
-                x, y, z,
-                12.0F,
-                dummyDestroyedBlocks,
-                new Vec3(0, 0.6, 0)
-        );
-
+        ClientboundExplodePacket shakePacket = new ClientboundExplodePacket(x, y, z, 12.0F, new ArrayList<>(), new Vec3(0, 0.6, 0));
         for (ServerPlayer player : players) {
             player.connection.send(shakePacket);
             player.connection.send(new ClientboundAnimatePacket(player, 2));
-
-            double shakeOffset = (player.getRandom().nextDouble() - 0.5) * 0.2;
-            player.setDeltaMovement(player.getDeltaMovement().add(shakeOffset, 0.15, -shakeOffset));
-            player.hurtMarked = true;
         }
     }
 
     private static DamageSource buildSource(ServerLevel level, DamagePhaseEntry entry) {
-        var dmgTypeHolder = level.registryAccess()
-                .registryOrThrow(net.minecraft.core.registries.Registries.DAMAGE_TYPE)
-                .getHolderOrThrow(DisintegrationSpell.DISINTEGRATION_DAMAGE_TYPE);
-
+        var damageTypeRegistry = level.registryAccess().registryOrThrow(Registries.DAMAGE_TYPE);
+        var dmgTypeHolder = damageTypeRegistry.getHolderOrThrow(DisintegrationSpell.DISINTEGRATION_DAMAGE_TYPE);
         Entity caster = level.getEntity(entry.casterUUID);
         return caster != null ? new DamageSource(dmgTypeHolder, caster) : new DamageSource(dmgTypeHolder);
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // ── 構造体定義
-    // ─────────────────────────────────────────────────────────────────
-
     private static class MultiLightLocation {
-        ServerLevel level = null;
-        BlockPos lastBase = null;
-        BlockPos lastBody = null;
-        BlockPos lastHead = null;
-
-        void copyFrom(MultiLightLocation other) {
-            this.level = other.level;
-            this.lastBase = other.lastBase;
-            this.lastBody = other.lastBody;
-            this.lastHead = other.lastHead;
-        }
+        ServerLevel level = null; BlockPos lastBase = null; BlockPos lastBody = null;
+        void copyFrom(MultiLightLocation other) { this.level = other.level; this.lastBase = other.lastBase; this.lastBody = other.lastBody; }
     }
 
     private static class DamagePhaseEntry {
-        final UUID casterUUID;
-        final int  maxTicks;
-        final float baseDamage;
-        final ServerLevel level;
-        int elapsedTicks = 0;
-        boolean isEnding = false; // 重複終了処理・ドロップ無限増殖を防ぐガードフラグ
+        final UUID casterUUID; final int maxTicks; final float baseDamage; final ServerLevel level;
+        final double lockX, lockY, lockZ;
+        int elapsedTicks = 0; boolean isEnding = false;
+        float currentHoverOffset = 0.0F;
         final MultiLightLocation lastLightPos = new MultiLightLocation();
-
-        DamagePhaseEntry(UUID casterUUID, int maxTicks, float baseDamage, ServerLevel level) {
-            this.casterUUID = casterUUID;
-            this.maxTicks   = maxTicks;
-            this.baseDamage = baseDamage;
-            this.level      = level;
+        DamagePhaseEntry(UUID casterUUID, int maxTicks, float baseDamage, ServerLevel level, double lx, double ly, double lz) {
+            this.casterUUID = casterUUID; this.maxTicks = maxTicks; this.baseDamage = baseDamage; this.level = level;
+            this.lockX = lx; this.lockY = ly; this.lockZ = lz;
         }
     }
 
     private static class FrozenTargetEntry {
-        final UUID casterUUID;
-        final double lockX, initialY, lockZ;
-        float currentHoverOffset = 0.0F;
+        final UUID casterUUID; final double lockX, initialY, lockZ; float currentHoverOffset = 0.0F;
         final MultiLightLocation lastLightPos = new MultiLightLocation();
-
-        FrozenTargetEntry(UUID casterUUID, double lockX, double initialY, double lockZ) {
-            this.casterUUID = casterUUID;
-            this.lockX = lockX;
-            this.initialY = initialY;
-            this.lockZ = lockZ;
-        }
+        FrozenTargetEntry(UUID casterUUID, double lockX, double initialY, double lockZ) { this.casterUUID = casterUUID; this.lockX = lockX; this.initialY = initialY; this.lockZ = lockZ; }
     }
 }
