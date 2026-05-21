@@ -36,5 +36,8 @@
   "ui.more_iss.freischutz.bypass_penalty": "§c契約の踏み倒しは許されない。悪魔の絶対的な執行が下った。",
   "ui.more_iss.freischutz.illegal_remove_penalty": "§c「報い」の拒絶、あるいは解除は許されない。悪魔の絶対的な執行が下った。",
   "effect.more_iss.demonic_covenant": "悪魔の契約",
-  "effect.more_iss.retribution": "報い"
+  "effect.more_iss.retribution": "報い",
+  "block.more_iss.fusion_table": "融合作業台",
+  "container.more_iss.fusion_table": "融合作業台",
+  "gui.more_iss.catalyst": "触媒"
 }
