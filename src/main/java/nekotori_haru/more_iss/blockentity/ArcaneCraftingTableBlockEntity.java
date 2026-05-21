@@ -1,5 +1,6 @@
 package nekotori_haru.more_iss.blockentity;
 
+import com.mojang.logging.LogUtils;
 import nekotori_haru.more_iss.More_iss;
 import nekotori_haru.more_iss.menu.ArcaneCraftingMenu;
 import nekotori_haru.more_iss.network.ModNetwork;
@@ -29,17 +30,19 @@ import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.ItemStackHandler;
 import net.minecraftforge.network.PacketDistributor;
+import org.slf4j.Logger;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Collection;
 import java.util.Optional;
 
 public class ArcaneCraftingTableBlockEntity extends BaseContainerBlockEntity implements WorldlyContainer {
+    private static final Logger LOGGER = LogUtils.getLogger();
 
-    public static final int CRAFT_DURATION = 100; // 5秒
-    public static final int CATALYST_MAX_STACK = 1024; // 触媒スロットの最大数
+    public static final int CRAFT_DURATION = 100;
+    public static final int CATALYST_MAX_STACK = 1024;
 
-    // ⭕ アイテムデータの実体はこれ1本のみに一本化！
     private final ItemStackHandler itemHandler = new ItemStackHandler(10) {
         @Override
         protected void onContentsChanged(int slot) {
@@ -70,9 +73,6 @@ public class ArcaneCraftingTableBlockEntity extends BaseContainerBlockEntity imp
         super(More_iss.ARCANE_CRAFTING_TABLE_BE.get(), pos, state);
     }
 
-    /**
-     * パケット側から呼び出されるアニメーション更新用のクライアント専用メソッド
-     */
     public void setCraftingAnimFromPacket(int craftingTick, boolean active) {
         this.craftingTick = craftingTick;
         this.isCraftingActive = active;
@@ -82,23 +82,64 @@ public class ArcaneCraftingTableBlockEntity extends BaseContainerBlockEntity imp
      * 毎tick実行されるクラフト主処理
      */
     public static void serverTick(Level level, BlockPos pos, BlockState state, ArcaneCraftingTableBlockEntity be) {
+        if (level.isClientSide) {
+            return;
+        }
+
+        LOGGER.info("[DEBUG] serverTick called at {}", pos);
+
         RecipeWrapper wrapper = new RecipeWrapper(be);
+
+        // デバッグ: アイテムの状態を確認
+        for (int i = 0; i < 10; i++) {
+            ItemStack item = be.itemHandler.getStackInSlot(i);
+            if (!item.isEmpty()) {
+                LOGGER.info("[DEBUG] Slot {}: {} x{}", i, item.getItem().getName(item).getString(), item.getCount());
+            }
+        }
+
+        // 🔥 デバッグ: 登録されているレシピを全て列挙
+        Collection<ArcaneCraftingRecipe> allRecipes = level.getRecipeManager()
+                .getAllRecipesFor(ArcaneCraftingRecipeType.INSTANCE);
+        LOGGER.info("[DEBUG] Total recipes registered: {}", allRecipes.size());
+        for (ArcaneCraftingRecipe recipe : allRecipes) {
+            LOGGER.info("[DEBUG]   - Recipe ID: {}", recipe.getId());
+        }
+
         Optional<ArcaneCraftingRecipe> recipeOpt = level.getRecipeManager()
                 .getRecipeFor(ArcaneCraftingRecipeType.INSTANCE, wrapper, level);
 
+        LOGGER.info("[DEBUG] Recipe found: {}", recipeOpt.isPresent());
+
         if (recipeOpt.isPresent()) {
             ArcaneCraftingRecipe recipe = recipeOpt.get();
-
             ItemStack outputSlot = be.itemHandler.getStackInSlot(8);
             ItemStack resultStack = recipe.getResultItem(level.registryAccess());
 
-            if (outputSlot.isEmpty() || (ItemStack.isSameItemSameTags(outputSlot, resultStack) && outputSlot.getCount() + resultStack.getCount() <= outputSlot.getMaxStackSize())) {
+            LOGGER.info("[DEBUG] Recipe result: {}", resultStack.getItem().getName(resultStack).getString());
+            LOGGER.info("[DEBUG] Output slot: {} x{}",
+                    outputSlot.isEmpty() ? "EMPTY" : outputSlot.getItem().getName(outputSlot).getString(),
+                    outputSlot.getCount());
+
+            if (resultStack.isEmpty()) {
+                LOGGER.warn("[DEBUG] Result stack is empty!");
+                be.stopCrafting(level, pos);
+                return;
+            }
+
+            boolean canCraft = outputSlot.isEmpty() ||
+                    (ItemStack.isSameItemSameTags(outputSlot, resultStack) &&
+                            outputSlot.getCount() + resultStack.getCount() <= outputSlot.getMaxStackSize());
+
+            LOGGER.info("[DEBUG] Can craft: {}", canCraft);
+
+            if (canCraft) {
                 if (!be.isCraftingActive) {
+                    LOGGER.info("[DEBUG] Starting craft...");
                     be.isCraftingActive = true;
                     be.craftingTick = CRAFT_DURATION;
                     be.setChanged();
 
-                    // ⭕ 修正: TRACKING_CHUNK を使い、引数を 3 つ完璧に揃える
                     ModNetwork.CHANNEL.send(
                             PacketDistributor.TRACKING_CHUNK.with(() -> level.getChunkAt(pos)),
                             new PacketSyncCraftingAnim(pos, be.craftingTick, true)
@@ -107,7 +148,7 @@ public class ArcaneCraftingTableBlockEntity extends BaseContainerBlockEntity imp
 
                 if (be.craftingTick > 0) {
                     be.craftingTick--;
-                    // 5tickに1回、クライアントへアニメーション進行度を同期
+
                     if (be.craftingTick % 5 == 0) {
                         ModNetwork.CHANNEL.send(
                                 PacketDistributor.TRACKING_CHUNK.with(() -> level.getChunkAt(pos)),
@@ -118,19 +159,19 @@ public class ArcaneCraftingTableBlockEntity extends BaseContainerBlockEntity imp
                 }
 
                 if (be.craftingTick <= 0) {
+                    LOGGER.info("[DEBUG] Crafting finished!");
                     be.finishCrafting(recipe);
                 }
             } else {
+                LOGGER.info("[DEBUG] Cannot craft, stopping...");
                 be.stopCrafting(level, pos);
             }
         } else {
+            LOGGER.warn("[DEBUG] No recipe found!");
             be.stopCrafting(level, pos);
         }
     }
 
-    /**
-     * クラフト完了処理
-     */
     private void finishCrafting(ArcaneCraftingRecipe recipe) {
         for (int i = 0; i < 8; i++) {
             itemHandler.extractItem(i, 1, false);
@@ -151,7 +192,6 @@ public class ArcaneCraftingTableBlockEntity extends BaseContainerBlockEntity imp
         craftingTick = 0;
         setChanged();
 
-        // ⭕ 修正: TRACKING_CHUNK を使い、引数を 3 つ完璧に揃える
         if (level != null) {
             ModNetwork.CHANNEL.send(
                     PacketDistributor.TRACKING_CHUNK.with(() -> level.getChunkAt(worldPosition)),
@@ -160,16 +200,12 @@ public class ArcaneCraftingTableBlockEntity extends BaseContainerBlockEntity imp
         }
     }
 
-    /**
-     * クラフト中断処理
-     */
     private void stopCrafting(Level level, BlockPos pos) {
         if (isCraftingActive) {
             isCraftingActive = false;
             craftingTick = 0;
             setChanged();
 
-            // ⭕ 修正: TRACKING_CHUNK を使い、引数を 3 つ完璧に揃える
             ModNetwork.CHANNEL.send(
                     PacketDistributor.TRACKING_CHUNK.with(() -> level.getChunkAt(pos)),
                     new PacketSyncCraftingAnim(pos, 0, false)
@@ -177,7 +213,6 @@ public class ArcaneCraftingTableBlockEntity extends BaseContainerBlockEntity imp
         }
     }
 
-    // --- Container (WorldlyContainer) 実装（すべて内部の itemHandler へ一本化） ---
     @Override public int getContainerSize() { return 10; }
     @Override public boolean isEmpty() {
         for (int i = 0; i < 10; i++) if (!itemHandler.getStackInSlot(i).isEmpty()) return false;
@@ -194,7 +229,6 @@ public class ArcaneCraftingTableBlockEntity extends BaseContainerBlockEntity imp
     @Override public boolean stillValid(Player player) { return Container.stillValidBlockEntity(this, player); }
     @Override public void clearContent() { for (int i = 0; i < 10; i++) itemHandler.setStackInSlot(i, ItemStack.EMPTY); }
 
-    // --- NBT 処理 ---
     @Override
     public void load(CompoundTag tag) {
         super.load(tag);
@@ -234,7 +268,6 @@ public class ArcaneCraftingTableBlockEntity extends BaseContainerBlockEntity imp
         lazyItemHandler.invalidate();
     }
 
-    // レシピ検証用ラッパー
     public static class RecipeWrapper implements Container {
         private final ArcaneCraftingTableBlockEntity be;
         public RecipeWrapper(ArcaneCraftingTableBlockEntity be) { this.be = be; }

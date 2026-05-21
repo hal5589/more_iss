@@ -72,6 +72,7 @@ public class ArcaneCraftingMenu extends AbstractContainerMenu {
             addSlot(new Slot(playerInv, col, 8 + col * 18, 176));
         }
 
+        // ⭕ 重要: ContainerData を同期する
         addDataSlots(data);
     }
 
@@ -81,8 +82,13 @@ public class ArcaneCraftingMenu extends AbstractContainerMenu {
         return new SimpleContainer(10);
     }
 
-    public int getCraftingTick() { return data.get(0); }
-    public boolean isCraftingActive() { return data.get(1) == 1; }
+    public int getCraftingTick() {
+        return data.get(0);
+    }
+
+    public boolean isCraftingActive() {
+        return data.get(1) == 1;
+    }
 
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
@@ -116,11 +122,24 @@ public class ArcaneCraftingMenu extends AbstractContainerMenu {
         return result;
     }
 
-    @Override public boolean stillValid(Player player) { return container.stillValid(player); }
+    @Override
+    public boolean stillValid(Player player) {
+        return container.stillValid(player);
+    }
 
     private static class CatalystSlot extends Slot {
-        public CatalystSlot(Container container, int slot, int x, int y) { super(container, slot, x, y); }
-        @Override public int getMaxStackSize() { return ArcaneCraftingTableBlockEntity.CATALYST_MAX_STACK; }
-        @Override public int getMaxStackSize(ItemStack stack) { return ArcaneCraftingTableBlockEntity.CATALYST_MAX_STACK; }
+        public CatalystSlot(Container container, int slot, int x, int y) {
+            super(container, slot, x, y);
+        }
+
+        @Override
+        public int getMaxStackSize() {
+            return ArcaneCraftingTableBlockEntity.CATALYST_MAX_STACK;
+        }
+
+        @Override
+        public int getMaxStackSize(ItemStack stack) {
+            return ArcaneCraftingTableBlockEntity.CATALYST_MAX_STACK;
+        }
     }
 }

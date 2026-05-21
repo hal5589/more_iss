@@ -1,6 +1,8 @@
 package nekotori_haru.more_iss.recipe;
 
 import com.google.gson.*;
+import nekotori_haru.more_iss.More_iss; // ⭕ これが必要でした！メインクラスを正しくインポートします
+import nekotori_haru.more_iss.blockentity.ArcaneCraftingTableBlockEntity;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.FriendlyByteBuf;
@@ -11,7 +13,6 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.*;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.registries.ForgeRegistries;
-import nekotori_haru.more_iss.blockentity.ArcaneCraftingTableBlockEntity;
 
 import javax.annotation.Nullable;
 
@@ -47,11 +48,23 @@ public class ArcaneCraftingRecipe implements Recipe<ArcaneCraftingTableBlockEnti
         }
 
         // 触媒スロット(9)のチェック
-        if (this.catalyst != null && this.catalyst != Ingredient.EMPTY && this.catalyst.getItems().length > 0) {
-            if (!this.catalyst.test(inv.getItem(9))) {
-                return false;
+        if (this.catalyst != null && this.catalyst != Ingredient.EMPTY) {
+            if (this.catalyst.getItems().length > 0) {
+                if (!this.catalyst.test(inv.getItem(9))) {
+                    return false;
+                }
             }
         }
+
+        // 出力スロット(8)のチェック
+        ItemStack outputSlot = inv.getItem(8);
+        ItemStack resultItem = this.result;
+
+        if (!outputSlot.isEmpty() &&
+                !ItemStack.isSameItemSameTags(outputSlot, resultItem)) {
+            return false;
+        }
+
         return true;
     }
 
@@ -77,12 +90,14 @@ public class ArcaneCraftingRecipe implements Recipe<ArcaneCraftingTableBlockEnti
 
     @Override
     public RecipeSerializer<?> getSerializer() {
-        return ArcaneCraftingRecipeSerializer.INSTANCE;
+        // ⭕ インポートしたMore_issからシリアライザーを取得
+        return More_iss.ARCANE_CRAFTING_SERIALIZER.get();
     }
 
     @Override
     public RecipeType<?> getType() {
-        return ArcaneCraftingRecipeType.INSTANCE;
+        // ⭕ インポートしたMore_issからレシピタイプを取得
+        return More_iss.ARCANE_CRAFTING_TYPE.get();
     }
 
     public boolean isCatalystConsumed() {
@@ -90,7 +105,7 @@ public class ArcaneCraftingRecipe implements Recipe<ArcaneCraftingTableBlockEnti
     }
 
     // =========================================================================
-    //  Serializer
+    //  Serializer (JSONパース処理)
     // =========================================================================
     public static class ArcaneCraftingRecipeSerializer implements RecipeSerializer<ArcaneCraftingRecipe> {
         public static final ArcaneCraftingRecipeSerializer INSTANCE = new ArcaneCraftingRecipeSerializer();
@@ -98,29 +113,49 @@ public class ArcaneCraftingRecipe implements Recipe<ArcaneCraftingTableBlockEnti
         @Override
         public ArcaneCraftingRecipe fromJson(ResourceLocation id, JsonObject json) {
             JsonArray ingredientsArray = GsonHelper.getAsJsonArray(json, "ingredients");
-            NonNullList<Ingredient> ingredients = NonNullList.withSize(8, Ingredient.of(Items.AIR));
+            NonNullList<Ingredient> ingredients = NonNullList.withSize(8, Ingredient.EMPTY);
 
             for (int i = 0; i < 8; i++) {
                 if (i < ingredientsArray.size()) {
-                    JsonObject obj = ingredientsArray.get(i).getAsJsonObject();
-                    if (obj.entrySet().isEmpty()) {
-                        ingredients.set(i, Ingredient.of(Items.AIR));
-                    } else {
-                        ingredients.set(i, Ingredient.fromJson(obj));
+                    JsonElement elem = ingredientsArray.get(i);
+                    if (elem.isJsonObject()) {
+                        JsonObject obj = elem.getAsJsonObject();
+                        if (obj.entrySet().isEmpty()) {
+                            ingredients.set(i, Ingredient.EMPTY);
+                        } else {
+                            ingredients.set(i, Ingredient.fromJson(obj));
+                        }
+                    } else if (elem.isJsonPrimitive()) {
+                        String itemName = elem.getAsString();
+                        if (itemName.equals("minecraft:air") || itemName.equals("air")) {
+                            ingredients.set(i, Ingredient.EMPTY);
+                        } else {
+                            ResourceLocation itemId = new ResourceLocation(itemName);
+                            var item = ForgeRegistries.ITEMS.getValue(itemId);
+                            if (item != null && item != Items.AIR) {
+                                ingredients.set(i, Ingredient.of(item));
+                            } else {
+                                ingredients.set(i, Ingredient.EMPTY);
+                            }
+                        }
                     }
                 }
             }
 
             Ingredient catalyst = Ingredient.EMPTY;
             if (json.has("catalyst")) {
-                catalyst = Ingredient.fromJson(json.get("catalyst"));
+                JsonElement catalystElem = json.get("catalyst");
+                if (catalystElem.isJsonObject()) {
+                    catalyst = Ingredient.fromJson(catalystElem);
+                }
             }
             boolean catalystConsume = GsonHelper.getAsBoolean(json, "catalyst_consume", false);
 
             JsonObject resultObj = GsonHelper.getAsJsonObject(json, "result");
             ResourceLocation itemId = new ResourceLocation(GsonHelper.getAsString(resultObj, "item"));
             int count = GsonHelper.getAsInt(resultObj, "count", 1);
-            ItemStack result = new ItemStack(ForgeRegistries.ITEMS.getValue(itemId), count);
+            var item = ForgeRegistries.ITEMS.getValue(itemId);
+            ItemStack result = (item != null && item != Items.AIR) ? new ItemStack(item, count) : ItemStack.EMPTY;
 
             return new ArcaneCraftingRecipe(id, ingredients, catalyst, catalystConsume, result);
         }
@@ -128,7 +163,7 @@ public class ArcaneCraftingRecipe implements Recipe<ArcaneCraftingTableBlockEnti
         @Nullable
         @Override
         public ArcaneCraftingRecipe fromNetwork(ResourceLocation id, FriendlyByteBuf buf) {
-            NonNullList<Ingredient> ingredients = NonNullList.withSize(8, Ingredient.of(Items.AIR));
+            NonNullList<Ingredient> ingredients = NonNullList.withSize(8, Ingredient.EMPTY);
             for (int i = 0; i < 8; i++) {
                 ingredients.set(i, Ingredient.fromNetwork(buf));
             }
