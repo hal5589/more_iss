@@ -30,7 +30,6 @@ public class ArcaneCraftingRecipe implements Recipe<ArcaneCraftingTableBlockEnti
                                 Ingredient catalyst,
                                 boolean catalystConsume,
                                 ItemStack result) {
-        // ★修正: this. を付けて正しくフィールドに代入
         this.id = id;
         this.ingredients = ingredients;
         this.catalyst = catalyst;
@@ -40,37 +39,41 @@ public class ArcaneCraftingRecipe implements Recipe<ArcaneCraftingTableBlockEnti
 
     @Override
     public boolean matches(ArcaneCraftingTableBlockEntity.RecipeWrapper inv, Level level) {
+        // 円形スロット(0-7)のチェック
         for (int i = 0; i < 8; i++) {
-            Ingredient ing = ingredients.get(i);
-            ItemStack itemInSlot = inv.getItem(i);
-
-            if (ing.isEmpty() || ing.test(ItemStack.EMPTY)) {
-                if (!itemInSlot.isEmpty()) return false;
-            } else {
-                if (!ing.test(itemInSlot)) return false;
+            if (!ingredients.get(i).test(inv.getItem(i))) {
+                return false;
             }
         }
-        if (!catalyst.isEmpty()) {
-            if (!catalyst.test(inv.getItem(9))) return false;
+
+        // 触媒スロット(9)のチェック
+        if (this.catalyst != null && this.catalyst != Ingredient.EMPTY && this.catalyst.getItems().length > 0) {
+            if (!this.catalyst.test(inv.getItem(9))) {
+                return false;
+            }
         }
         return true;
     }
 
     @Override
-    public ItemStack assemble(ArcaneCraftingTableBlockEntity.RecipeWrapper inv, RegistryAccess registryAccess) {
+    public ItemStack assemble(ArcaneCraftingTableBlockEntity.RecipeWrapper inv, RegistryAccess access) {
         return result.copy();
     }
 
     @Override
-    public boolean canCraftInDimensions(int w, int h) { return true; }
+    public boolean canCraftInDimensions(int width, int height) {
+        return true;
+    }
 
     @Override
-    public ItemStack getResultItem(RegistryAccess registryAccess) {
+    public ItemStack getResultItem(RegistryAccess access) {
         return result;
     }
 
     @Override
-    public ResourceLocation getId() { return id; }
+    public ResourceLocation getId() {
+        return id;
+    }
 
     @Override
     public RecipeSerializer<?> getSerializer() {
@@ -82,24 +85,29 @@ public class ArcaneCraftingRecipe implements Recipe<ArcaneCraftingTableBlockEnti
         return ArcaneCraftingRecipeType.INSTANCE;
     }
 
-    public NonNullList<Ingredient> getIngredients() { return ingredients; }
-    public Ingredient getCatalyst() { return catalyst; }
-    public boolean isCatalystConsumed() { return catalystConsume; }
+    public boolean isCatalystConsumed() {
+        return catalystConsume;
+    }
 
+    // =========================================================================
+    //  Serializer
+    // =========================================================================
     public static class ArcaneCraftingRecipeSerializer implements RecipeSerializer<ArcaneCraftingRecipe> {
-
         public static final ArcaneCraftingRecipeSerializer INSTANCE = new ArcaneCraftingRecipeSerializer();
 
         @Override
         public ArcaneCraftingRecipe fromJson(ResourceLocation id, JsonObject json) {
-            JsonArray ingArray = GsonHelper.getAsJsonArray(json, "ingredients");
+            JsonArray ingredientsArray = GsonHelper.getAsJsonArray(json, "ingredients");
             NonNullList<Ingredient> ingredients = NonNullList.withSize(8, Ingredient.of(Items.AIR));
-            for (int i = 0; i < Math.min(ingArray.size(), 8); i++) {
-                JsonElement el = ingArray.get(i);
-                if (el.isJsonObject() && el.getAsJsonObject().size() == 0) {
-                    ingredients.set(i, Ingredient.of(Items.AIR));
-                } else {
-                    ingredients.set(i, Ingredient.fromJson(el));
+
+            for (int i = 0; i < 8; i++) {
+                if (i < ingredientsArray.size()) {
+                    JsonObject obj = ingredientsArray.get(i).getAsJsonObject();
+                    if (obj.entrySet().isEmpty()) {
+                        ingredients.set(i, Ingredient.of(Items.AIR));
+                    } else {
+                        ingredients.set(i, Ingredient.fromJson(obj));
+                    }
                 }
             }
 
@@ -107,7 +115,6 @@ public class ArcaneCraftingRecipe implements Recipe<ArcaneCraftingTableBlockEnti
             if (json.has("catalyst")) {
                 catalyst = Ingredient.fromJson(json.get("catalyst"));
             }
-
             boolean catalystConsume = GsonHelper.getAsBoolean(json, "catalyst_consume", false);
 
             JsonObject resultObj = GsonHelper.getAsJsonObject(json, "result");
