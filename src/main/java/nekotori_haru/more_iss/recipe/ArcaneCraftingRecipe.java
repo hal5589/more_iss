@@ -1,7 +1,6 @@
 package nekotori_haru.more_iss.recipe;
 
 import com.google.gson.*;
-import nekotori_haru.more_iss.More_iss; // ⭕ これが必要でした！メインクラスを正しくインポートします
 import nekotori_haru.more_iss.blockentity.ArcaneCraftingTableBlockEntity;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.RegistryAccess;
@@ -90,14 +89,14 @@ public class ArcaneCraftingRecipe implements Recipe<ArcaneCraftingTableBlockEnti
 
     @Override
     public RecipeSerializer<?> getSerializer() {
-        // ⭕ インポートしたMore_issからシリアライザーを取得
-        return More_iss.ARCANE_CRAFTING_SERIALIZER.get();
+        // ⭕ 修正: More_iss を経由せず、内部のクラスから直接シリアライザーを返します
+        return ArcaneCraftingRecipeSerializer.INSTANCE;
     }
 
     @Override
     public RecipeType<?> getType() {
-        // ⭕ インポートしたMore_issからレシピタイプを取得
-        return More_iss.ARCANE_CRAFTING_TYPE.get();
+        // ⭕ 修正: More_iss を経由せず、専用のTypeクラスから直接タイプを返します
+        return ArcaneCraftingRecipeType.INSTANCE;
     }
 
     public boolean isCatalystConsumed() {
