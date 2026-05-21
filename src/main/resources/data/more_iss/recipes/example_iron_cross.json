@@ -1,0 +1,21 @@
+{
+  "type": "more_iss:arcane_crafting",
+  "ingredients": [
+    { "item": "minecraft:iron_ingot" },
+    { "item": "minecraft:air" },
+    { "item": "minecraft:iron_ingot" },
+    { "item": "minecraft:air" },
+    { "item": "minecraft:iron_ingot" },
+    { "item": "minecraft:air" },
+    { "item": "minecraft:iron_ingot" },
+    { "item": "minecraft:air" }
+  ],
+  "catalyst": {
+    "item": "minecraft:diamond"
+  },
+  "catalyst_consume": true,
+  "result": {
+    "item": "minecraft:iron_block",
+    "count": 1
+  }
+}
