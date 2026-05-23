@@ -18,10 +18,18 @@ public class ModNetwork {
     private static int packetId = 0;
 
     public static void register() {
+        // 既存のパケット (サーバー -> クライアント)
         CHANNEL.messageBuilder(PacketSyncCraftingAnim.class, packetId++, NetworkDirection.PLAY_TO_CLIENT)
                 .decoder(PacketSyncCraftingAnim::new)
                 .encoder(PacketSyncCraftingAnim::toBytes)
                 .consumerMainThread(PacketSyncCraftingAnim::handle)
+                .add();
+
+        // ⭕ 追加：クラフト完了パケット (クライアント -> サーバー)
+        CHANNEL.messageBuilder(PacketCraftComplete.class, packetId++, NetworkDirection.PLAY_TO_SERVER)
+                .decoder(PacketCraftComplete::new)
+                .encoder(PacketCraftComplete::toBytes)
+                .consumerMainThread(PacketCraftComplete::handle)
                 .add();
     }
 }

@@ -9,6 +9,7 @@ import nekotori_haru.more_iss.client.ArcaneCraftingScreen;
 import nekotori_haru.more_iss.menu.ArcaneCraftingMenu;
 import nekotori_haru.more_iss.network.ModNetwork;
 import nekotori_haru.more_iss.recipe.ArcaneCraftingRecipe;
+import nekotori_haru.more_iss.recipe.ArcaneCraftingRecipeSerializer; // ⭕ 追加：分離したシリアライザーのインポート
 import nekotori_haru.more_iss.recipe.ArcaneCraftingRecipeType;
 import nekotori_haru.more_iss.registry.ModEffects;
 import nekotori_haru.more_iss.spell.ender.EnderShootingStar;
@@ -31,8 +32,6 @@ import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.crafting.RecipeSerializer;
-import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -83,7 +82,8 @@ public class More_iss {
     public static final RegistryObject<AbstractSpell> ABSOLUTE_ZERO = SPELLS.register("absolute_zero", AbsoluteZeroSpell::new);
     public static final RegistryObject<AbstractSpell> DISINTEGRATION = SPELLS.register("disintegration", DisintegrationSpell::new);
 
-    public static final RegistryObject<Block> ARCANE_CRAFTING_TABLE = BLOCKS.register("fusion_table", () -> new ArcaneCraftingTableBlock(BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.5f).requiresCorrectToolForDrops()));
+    // すべての登録キー名を "fusion_table" に統一
+    public static final RegistryObject<Block> ARCANE_CRAFTING_TABLE = BLOCKS.register("fusion_table", () -> new ArcaneCraftingTableBlock(BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.5f).requiresCorrectToolForDrops().noOcclusion()));
     public static final RegistryObject<Item> ARCANE_CRAFTING_TABLE_ITEM = ITEMS.register("fusion_table", () -> new BlockItem(ARCANE_CRAFTING_TABLE.get(), new Item.Properties()));
     public static final RegistryObject<BlockEntityType<ArcaneCraftingTableBlockEntity>> ARCANE_CRAFTING_TABLE_BE = BLOCK_ENTITIES.register("fusion_table", () -> BlockEntityType.Builder.of(ArcaneCraftingTableBlockEntity::new, ARCANE_CRAFTING_TABLE.get()).build(null));
     public static final RegistryObject<MenuType<ArcaneCraftingMenu>> ARCANE_CRAFTING_MENU = MENU_TYPES.register("fusion_table", () -> IForgeMenuType.create(ArcaneCraftingMenu::new));
@@ -104,7 +104,6 @@ public class More_iss {
         BLOCK_ENTITIES.register(modEventBus);
         MENU_TYPES.register(modEventBus);
 
-        // ⭕ 【最重要修正】レシピ関係の登録は、DeferredRegisterを使わず、Forge公式の確実な登録イベントに流し込む
         modEventBus.addListener(this::registerRecipes);
 
         ModNetwork.register();
@@ -114,9 +113,6 @@ public class More_iss {
         DisintegrationTargetManager.init();
     }
 
-    /**
-     * ⭕ マイクラが「今からレシピ読み込むぞ！」となる直前の、完璧なタイミングで登録を割り込ませるメソッド
-     */
     private void registerRecipes(RegisterEvent event) {
         if (event.getRegistryKey().equals(ForgeRegistries.Keys.RECIPE_TYPES)) {
             event.register(ForgeRegistries.Keys.RECIPE_TYPES,
@@ -127,7 +123,7 @@ public class More_iss {
         if (event.getRegistryKey().equals(ForgeRegistries.Keys.RECIPE_SERIALIZERS)) {
             event.register(ForgeRegistries.Keys.RECIPE_SERIALIZERS,
                     new ResourceLocation(MODID, ArcaneCraftingRecipe.ID),
-                    () -> ArcaneCraftingRecipe.ArcaneCraftingRecipeSerializer.INSTANCE);
+                    () -> ArcaneCraftingRecipeSerializer.INSTANCE); // ⭕ インナークラスから独立した外部クラスのINSTANCEへ修正
             LOGGER.info("[More_iss] ArcaneCrafting RecipeSerializer registered successfully via RegisterEvent.");
         }
     }

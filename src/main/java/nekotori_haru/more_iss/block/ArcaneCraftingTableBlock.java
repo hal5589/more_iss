@@ -9,6 +9,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
@@ -22,6 +23,9 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraftforge.network.NetworkHooks;
 
 import javax.annotation.Nullable;
@@ -29,6 +33,22 @@ import javax.annotation.Nullable;
 public class ArcaneCraftingTableBlock extends BaseEntityBlock {
 
     public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
+
+    // ⭕ 追加：Blockbenchの複雑なモデルの時は、周囲の影や描画を正常にするために、ブロック全体の判定を正しく設定する
+    @Override
+    public VoxelShape getShape(BlockState state, BlockGetter world, BlockPos pos, CollisionContext context) {
+        return Shapes.block(); // 16x16x16いっぱいの当たり判定。もしすり抜けたい箇所があればここで調整可能
+    }
+
+    @Override
+    public boolean propagatesSkylightDown(BlockState state, BlockGetter reader, BlockPos pos) {
+        return true; // ⭕ 光を透過させる
+    }
+
+    @Override
+    public float getShadeBrightness(BlockState state, BlockGetter world, BlockPos pos) {
+        return 1.0F; // ⭕ ブロックの隙間が真っ黒の影にならないようにする設定
+    }
 
     public ArcaneCraftingTableBlock(BlockBehaviour.Properties props) {
         super(props);
@@ -53,7 +73,7 @@ public class ArcaneCraftingTableBlock extends BaseEntityBlock {
 
     @Override
     public RenderShape getRenderShape(BlockState state) {
-        return RenderShape.MODEL;
+        return RenderShape.MODEL; // ⭕ JSONモデルファイルをもとに描画する設定
     }
 
     @Nullable
@@ -65,22 +85,20 @@ public class ArcaneCraftingTableBlock extends BaseEntityBlock {
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-        // クライアント側（画面側）では時間を進めず、サーバー側でのみ tick を進める
         if (level.isClientSide) {
             return null;
         }
-
-        // 自分のBlockEntity型（More_iss.ARCANE_CRAFTING_TABLE_BE）と一致する場合のみ、serverTickを紐付ける
         return createTickerHelper(type, More_iss.ARCANE_CRAFTING_TABLE_BE.get(),
                 ArcaneCraftingTableBlockEntity::serverTick);
     }
+
     // -------------------------------------------------------------------------
     // 右クリックでGUIを開く
     // -------------------------------------------------------------------------
 
     @Override
     public InteractionResult use(BlockState state, Level level, BlockPos pos,
-                                  Player player, InteractionHand hand, BlockHitResult hit) {
+                                 Player player, InteractionHand hand, BlockHitResult hit) {
         if (level.isClientSide) return InteractionResult.SUCCESS;
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof ArcaneCraftingTableBlockEntity table) {
@@ -95,7 +113,7 @@ public class ArcaneCraftingTableBlock extends BaseEntityBlock {
 
     @Override
     public void onRemove(BlockState state, Level level, BlockPos pos,
-                          BlockState newState, boolean isMoving) {
+                         BlockState newState, boolean isMoving) {
         if (!state.is(newState.getBlock())) {
             BlockEntity be = level.getBlockEntity(pos);
             if (be instanceof ArcaneCraftingTableBlockEntity table) {

@@ -166,7 +166,7 @@ dependencies {
     implementation fg.deobf("curse.maven:moonlib-499980:8076692")
     implementation fg.deobf("curse.maven:endlib-1471165:8026953")
     implementation fg.deobf("curse.maven:slash-241596:4937125")
-    implementation fg.deobf("curse.maven:goety-586095:8087429")
+    //implementation fg.deobf("curse.maven:goety-586095:8087429")
     implementation fg.deobf("curse.maven:patchouli-306770:7731017")
 
     compileOnly fg.deobf("mezz.jei:jei-1.20.1-forge-api:15.3.0.4")

@@ -1,8 +1,0 @@
-{
-  "variants": {
-    "facing=north": { "model": "more_iss:block/arcane_crafting_table" },
-    "facing=south": { "model": "more_iss:block/arcane_crafting_table", "y": 180 },
-    "facing=east":  { "model": "more_iss:block/arcane_crafting_table", "y": 90 },
-    "facing=west":  { "model": "more_iss:block/arcane_crafting_table", "y": 270 }
-  }
-}

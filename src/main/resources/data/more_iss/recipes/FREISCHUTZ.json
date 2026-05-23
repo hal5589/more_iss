@@ -1,0 +1,28 @@
+{
+  "type": "more_iss:arcane_crafting",
+  "ingredients": [
+    {
+      "item": "irons_spellbooks:scroll",
+      "nbt": "{ISB_spell:{data:{base_lvl:10,id:\"irons_spellbooks:magic_missile\"}}}"
+    },
+    { "item": "irons_spellbooks:arcane_essence" },
+    { "item": "irons_spellbooks:arcane_essence" },
+    { "item": "irons_spellbooks:arcane_essence" },
+    { "item": "irons_spellbooks:arcane_essence" },
+    { "item": "irons_spellbooks:arcane_essence" },
+    { "item": "irons_spellbooks:arcane_essence" },
+    { "item": "irons_spellbooks:arcane_essence" },
+    {
+      "item": "irons_spellbooks:scroll",
+      "nbt": "{ISB_spell:{data:{base_lvl:10,id:\"irons_spellbooks:magic_arrow\"}}}"
+    }
+  ],
+  "catalyst": {
+    "item": "irons_spellbooks:legendary_ink"
+  },
+  "catalyst_consume": true,
+  "result_spell": {
+    "id": "more_iss:freischutz",
+    "level": 1
+  }
+}

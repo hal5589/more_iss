@@ -1,0 +1,30 @@
+{
+  "type": "more_iss:arcane_crafting",
+  "ingredients": [
+    {
+      "item": "irons_spellbooks:scroll",
+      "required_spell": "irons_spellbooks:heartstop",
+      "required_level": 5
+    },
+    { "item": "irons_spellbooks:arcane_essence" },
+    { "item": "irons_spellbooks:arcane_essence" },
+    { "item": "irons_spellbooks:arcane_essence" },
+    { "item": "irons_spellbooks:arcane_essence" },
+    { "item": "irons_spellbooks:arcane_essence" },
+    { "item": "irons_spellbooks:arcane_essence" },
+    { "item": "irons_spellbooks:arcane_essence" },
+    {
+      "item": "irons_spellbooks:scroll",
+      "required_spell": "irons_spellbooks:charge",
+      "required_level": 3
+    }
+  ],
+  "catalyst": {
+    "item": "irons_spellbooks:legendary_ink"
+  },
+  "catalyst_consume": true,
+  "result_spell": {
+    "id": "more_iss:overburst_blood",
+    "level": 1
+  }
+}

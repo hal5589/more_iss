@@ -1,0 +1,28 @@
+{
+  "type": "more_iss:arcane_crafting",
+  "ingredients": [
+    {
+      "item": "irons_spellbooks:scroll",
+      "nbt": "{ISB_spell:{data:{base_lvl:3,id:\"irons_spellbooks:blood_slash\"}}}"
+    },
+    { "item": "irons_spellbooks:arcane_essence" },
+    { "item": "irons_spellbooks:arcane_essence" },
+    { "item": "irons_spellbooks:arcane_essence" },
+    { "item": "irons_spellbooks:arcane_essence" },
+    { "item": "irons_spellbooks:arcane_essence" },
+    { "item": "irons_spellbooks:arcane_essence" },
+    { "item": "irons_spellbooks:arcane_essence" },
+    {
+      "item": "irons_spellbooks:scroll",
+      "nbt": "{ISB_spell:{data:{base_lvl:3,id:\"irons_spellbooks:sacrifice\"}}}"
+    }
+  ],
+  "catalyst": {
+    "item": "irons_spellbooks:legendary_ink"
+  },
+  "catalyst_consume": true,
+  "result_spell": {
+    "id": "more_iss:sacrificial_edge",
+    "level": 1
+  }
+}

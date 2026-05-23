@@ -2,13 +2,13 @@
   "type": "more_iss:arcane_crafting",
   "ingredients": [
     { "item": "minecraft:iron_ingot" },
-    {},
     { "item": "minecraft:iron_ingot" },
-    {},
     { "item": "minecraft:iron_ingot" },
-    {},
     { "item": "minecraft:iron_ingot" },
-    {},
+    { "item": "minecraft:iron_ingot" },
+    { "item": "minecraft:iron_ingot" },
+    { "item": "minecraft:iron_ingot" },
+    { "item": "minecraft:iron_ingot" },
     { "item": "minecraft:iron_ingot" }
   ],
   "catalyst": {

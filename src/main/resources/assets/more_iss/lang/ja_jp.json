@@ -38,6 +38,6 @@
   "effect.more_iss.demonic_covenant": "悪魔の契約",
   "effect.more_iss.retribution": "報い",
   "block.more_iss.fusion_table": "融合作業台",
-  "container.more_iss.fusion_table": "融合作業台",
+  "container.more_iss.arcane_crafting_table": "§d融合作業台",
   "gui.more_iss.catalyst": "触媒"
 }

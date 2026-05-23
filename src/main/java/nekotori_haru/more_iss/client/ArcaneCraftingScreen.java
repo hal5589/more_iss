@@ -1,12 +1,17 @@
 package nekotori_haru.more_iss.client;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import nekotori_haru.more_iss.blockentity.ArcaneCraftingTableBlockEntity;
 import nekotori_haru.more_iss.menu.ArcaneCraftingMenu;
+import nekotori_haru.more_iss.network.ModNetwork;
+import nekotori_haru.more_iss.network.PacketCraftComplete;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -30,6 +35,9 @@ public class ArcaneCraftingScreen extends AbstractContainerScreen<ArcaneCrafting
     private final boolean[] slotTriggered = new boolean[8];
     private boolean hasSentCompletionPacket = false;
 
+    // 爆発後にサーバーへパケットを送るまでのディレイタイマー
+    private int packetDelayTimer = -1;
+
     private final Random random = new Random();
     private int animTick = 0;
 
@@ -39,6 +47,12 @@ public class ArcaneCraftingScreen extends AbstractContainerScreen<ArcaneCrafting
 
     private int hideItemsTimer = 0;
     private boolean wasCraftingLastFrame = false;
+
+    private int highlightSlot = -1;
+    private int highlightTick = 0;
+
+    private int lastSoundedSlot = -1;
+    private int landedCount = 0;
 
     public ArcaneCraftingScreen(ArcaneCraftingMenu menu, Inventory inv, Component title) {
         super(menu, inv, title);
@@ -58,9 +72,14 @@ public class ArcaneCraftingScreen extends AbstractContainerScreen<ArcaneCrafting
         if (isCrafting && !wasCraftingLastFrame) {
             this.animTick = 0;
             this.hasSentCompletionPacket = false;
+            this.packetDelayTimer = -1;
             this.ringScale = 1.0f;
             this.ringVelocity = 0.0f;
             for (int i = 0; i < 8; i++) this.slotTriggered[i] = false;
+            this.highlightSlot = -1;
+            this.highlightTick = 0;
+            this.lastSoundedSlot = -1;
+            this.landedCount = 0;
         }
 
         if (isCrafting) {
@@ -71,6 +90,28 @@ public class ArcaneCraftingScreen extends AbstractContainerScreen<ArcaneCrafting
             ringVelocity += force;
             ringVelocity *= damping;
             ringScale += ringVelocity;
+
+            highlightTick++;
+            if (highlightTick >= 4) {
+                highlightTick = 0;
+                if (highlightSlot < 7) {
+                    highlightSlot++;
+                }
+            }
+
+            if (this.highlightSlot != -1 && this.highlightSlot != this.lastSoundedSlot && this.minecraft != null && this.minecraft.level != null) {
+                this.lastSoundedSlot = this.highlightSlot;
+                float pitch = 0.6f + (this.highlightSlot * 0.08f);
+
+                this.minecraft.level.playSound(
+                        this.minecraft.player,
+                        this.minecraft.player.getX(), this.minecraft.player.getY(), this.minecraft.player.getZ(),
+                        SoundEvents.AMETHYST_BLOCK_STEP,
+                        SoundSource.PLAYERS,
+                        0.5f,
+                        pitch
+                );
+            }
         }
 
         if (wasCraftingLastFrame && !isCrafting) hideItemsTimer = 20;
@@ -104,9 +145,8 @@ public class ArcaneCraftingScreen extends AbstractContainerScreen<ArcaneCrafting
                 drawPulseRing(gfx, x + CENTER_SLOT_X + 8, y + CENTER_SLOT_Y + 8, this.ringScale);
             }
 
-            // ⭕ 【新実装】開始から10 Ticksで 1.0倍→1.35倍へなめらかに拡大
             float growProg = Math.min(1.0f, (float)this.animTick / 10f);
-            float currentScale = 1.0f + (0.35f * growProg);
+            float currentScale = 1.0f + (0.15f * growProg);
 
             for (int i = 0; i < 8; i++) {
                 ItemStack itemToRender = savedStacks[i];
@@ -136,7 +176,6 @@ public class ArcaneCraftingScreen extends AbstractContainerScreen<ArcaneCrafting
                 float easedProgInward = 0f;
 
                 if (this.animTick < moveStartTick) {
-                    // 中心へ行く前は拡大された状態で待機
                 } else if (this.animTick >= moveStartTick && this.animTick < moveEndTick) {
                     float moveProg = (float)(this.animTick - moveStartTick) / moveDuration;
                     easedProgInward = (float) Math.pow(moveProg, 2.5);
@@ -154,11 +193,18 @@ public class ArcaneCraftingScreen extends AbstractContainerScreen<ArcaneCrafting
                     gfx.pose().pushPose();
                     gfx.pose().translate(0, 0, 100);
                     gfx.pose().translate(renderX + 8, renderY + 8, 0);
-                    gfx.pose().scale(currentScale, currentScale, 1.0f); // ⭕ 滑らかな可変スケール
+
+                    float finalScale = currentScale;
+                    if (i <= highlightSlot) {
+                        finalScale *= 1.35f;
+                    }
+
+                    gfx.pose().scale(finalScale, finalScale, 1.0f);
                     gfx.pose().translate(-(renderX + 8), -(renderY + 8), 0);
 
                     gfx.renderItem(itemToRender, renderX, renderY);
                     gfx.renderItemDecorations(this.font, itemToRender, renderX, renderY);
+
                     gfx.pose().popPose();
                 }
 
@@ -168,6 +214,21 @@ public class ArcaneCraftingScreen extends AbstractContainerScreen<ArcaneCrafting
                         this.slotTriggered[i] = true;
                         this.ringScale = 1.4f;
                         this.ringVelocity = 0.1f;
+
+                        if (this.minecraft != null && this.minecraft.level != null) {
+                            float fillPitch = 0.8f + (this.landedCount * 0.08f);
+                            this.landedCount++;
+
+                            this.minecraft.level.playSound(
+                                    this.minecraft.player,
+                                    this.minecraft.player.getX(), this.minecraft.player.getY(), this.minecraft.player.getZ(),
+                                    SoundEvents.END_PORTAL_FRAME_FILL,
+                                    SoundSource.PLAYERS,
+                                    0.8f,
+                                    fillPitch
+                            );
+                        }
+
                         for (int p = 0; p < 8 + random.nextInt(4); p++) {
                             double pAngle = random.nextDouble() * Math.PI * 2;
                             double speed = (15 + random.nextInt(25)) / 3.5 + (random.nextDouble() * 1.5);
@@ -176,11 +237,50 @@ public class ArcaneCraftingScreen extends AbstractContainerScreen<ArcaneCrafting
                     }
                 }
             }
-            if (totalSlotsAtCenter == 8 && !hasSentCompletionPacket) {
-                hasSentCompletionPacket = true;
-                this.sendCraftCompletionToServer();
+
+            // 全アイテムが中央に吸い込まれた瞬間にまず大爆発を起こし、タイマーを始動
+            if (totalSlotsAtCenter == 8 && packetDelayTimer == -1 && !hasSentCompletionPacket) {
+                packetDelayTimer = 3; // 3ティック（約0.15秒）のウェイトを設定
+
+                if (this.minecraft != null && this.minecraft.level != null) {
+                    this.minecraft.level.playSound(
+                            this.minecraft.player,
+                            this.minecraft.player.getX(), this.minecraft.player.getY(), this.minecraft.player.getZ(),
+                            SoundEvents.ENCHANTMENT_TABLE_USE,
+                            SoundSource.PLAYERS,
+                            1.0f,
+                            1.0f
+                    );
+                }
+
+                int burstCount = 45;
+                for (int p = 0; p < burstCount; p++) {
+                    double pAngle = (p * (2 * Math.PI) / burstCount) + (random.nextDouble() * 0.3 - 0.15);
+                    double speed = 7.0 + random.nextDouble() * 7.0;
+                    double vx = Math.cos(pAngle) * speed;
+                    double vy = Math.sin(pAngle) * speed;
+                    int age = 16 + random.nextInt(12);
+                    boolean isBall = (p % 2 == 0);
+
+                    impactParticles.add(new ImpactParticle(
+                            CENTER_SLOT_X + 8, CENTER_SLOT_Y + 8,
+                            vx, vy,
+                            age, 0.85,
+                            isBall
+                    ));
+                }
+            }
+
+            // タイマーが作動中の場合、毎フレーム減算して0になったらパケットを送信
+            if (packetDelayTimer > 0) {
+                packetDelayTimer--;
+                if (packetDelayTimer == 0 && !hasSentCompletionPacket) {
+                    hasSentCompletionPacket = true;
+                    this.sendCraftCompletionToServer(); // 爆発の光のなかでパケットを投げる
+                }
             }
         }
+
         if (!impactParticles.isEmpty()) renderImpactParticles(gfx, x, y);
         this.renderTooltip(gfx, mouseX, mouseY);
     }
@@ -200,20 +300,31 @@ public class ArcaneCraftingScreen extends AbstractContainerScreen<ArcaneCrafting
         impactParticles.removeIf(p -> p.age <= 0);
         for (ImpactParticle p : impactParticles) {
             p.x += p.vx; p.y += p.vy; p.vx *= p.friction; p.vy *= p.friction; p.age--;
-            int alpha = (int)(190 * Math.pow((float)p.age / p.maxAge, 1.5));
+            int alpha = (int)(230 * Math.pow((float)p.age / p.maxAge, 1.3));
             if (alpha < 0) alpha = 0;
+
             if (p.isBall) {
-                int col = (alpha << 24) | 0x9B59EF;
+                int col = (alpha << 24) | 0x701CC2;
                 gfx.fill(baseX + (int)p.x - 2, baseY + (int)p.y - 1, baseX + (int)p.x + 2, baseY + (int)p.y + 2, col);
                 gfx.fill(baseX + (int)p.x - 1, baseY + (int)p.y - 2, baseX + (int)p.x + 2, baseY + (int)p.y - 1, col);
                 gfx.fill(baseX + (int)p.x - 1, baseY + (int)p.y + 2, baseX + (int)p.x + 2, baseY + (int)p.y + 3, col);
             } else {
-                gfx.fill(baseX + (int)p.x - 1, baseY + (int)p.y - 1, baseX + (int)p.x + 1, baseY + (int)p.y + 1, (alpha << 24) | 0xFFF5FF);
+                gfx.fill(baseX + (int)p.x - 1, baseY + (int)p.y - 1, baseX + (int)p.x + 1, baseY + (int)p.y + 1, (alpha << 24) | 0xE0B0FF);
             }
         }
     }
 
-    private void sendCraftCompletionToServer() {}
+    // ⭕ 【送信処理の実装】爆発ディレイ終了時に呼び出され、サーバー側へ完了を伝えます
+    private void sendCraftCompletionToServer() {
+        if (this.minecraft != null && this.minecraft.player != null && this.menu.stillValid(this.minecraft.player)) {
+            // スロット0のコンテナがBlockEntityであればその座標を、取得できなければプレイヤーの足元座標をフォールバックとして送信
+            if (this.menu.getSlot(0).container instanceof ArcaneCraftingTableBlockEntity be) {
+                ModNetwork.CHANNEL.sendToServer(new PacketCraftComplete(be.getBlockPos()));
+            } else {
+                ModNetwork.CHANNEL.sendToServer(new PacketCraftComplete(this.minecraft.player.blockPosition()));
+            }
+        }
+    }
 
     @Override
     protected void renderBg(GuiGraphics gfx, float partialTick, int mouseX, int mouseY) {
@@ -233,11 +344,12 @@ public class ArcaneCraftingScreen extends AbstractContainerScreen<ArcaneCrafting
     @Override
     protected void renderLabels(GuiGraphics gfx, int mouseX, int mouseY) {
         super.renderLabels(gfx, mouseX, mouseY);
-        gfx.drawString(this.font, Component.translatable("gui.more_iss.catalyst"), 116, 132, 0x404040, false);
     }
 
     private static class ImpactParticle {
-        double x, y, vx, vy, friction; int age, maxAge; boolean isBall;
+        double x, y, vx, vy, friction;
+        int age, maxAge;
+        boolean isBall;
         ImpactParticle(double x, double y, double vx, double vy, int age, double friction, boolean isBall) {
             this.x = x; this.y = y; this.vx = vx; this.vy = vy; this.age = age; this.maxAge = age; this.friction = friction; this.isBall = isBall;
         }

@@ -19,7 +19,7 @@ public class ArcaneCraftingMenu extends AbstractContainerMenu {
     private final Container container;
     private final ContainerData data;
 
-    // あなたが修正してくれた正確な円形スロット座標（人力修正版）
+    // 正確な円形スロット座標（人力修正版）
     public static final int[][] CIRCLE_POS = {
             { 80, 14 },   // 0: 上
             { 120, 31 },  // 1: 右上
@@ -50,31 +50,33 @@ public class ArcaneCraftingMenu extends AbstractContainerMenu {
             this.data = new SimpleContainerData(2);
         }
 
-        // 0-7: 周囲の円形スロット
+        // 0-7: 周囲の円形スロット（最大スタック数を1に制限）
         for (int i = 0; i < 8; i++) {
             this.addSlot(new Slot(container, i, CIRCLE_POS[i][0], CIRCLE_POS[i][1]) {
                 @Override public boolean mayPlace(ItemStack stack) { return !ArcaneCraftingMenu.this.isCraftingActive(); }
                 @Override public boolean mayPickup(Player playerIn) { return !ArcaneCraftingMenu.this.isCraftingActive(); }
+                @Override public int getMaxStackSize() { return 1; }
             });
         }
 
-        // 8: 中央スロット
+        // 8: 中央スロット（最大スタック数を1に制限）
         this.addSlot(new Slot(container, 8, CENTER_X, CENTER_Y) {
             @Override public boolean mayPlace(ItemStack stack) { return !ArcaneCraftingMenu.this.isCraftingActive(); }
             @Override public boolean mayPickup(Player playerIn) { return !ArcaneCraftingMenu.this.isCraftingActive(); }
+            @Override public int getMaxStackSize() { return 1; }
         });
 
-        // 9: 触媒スロット
+        // 9: 触媒スロット（こちらは通常通りスタック可能）
         this.addSlot(new CatalystSlot(container, 9, CATALYST_X, CATALYST_Y));
 
-        // ⭕ 1pxのズレ解消（X=8, Y=162）
+        // プレイヤーインベントリ（X=8, Y=162）
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
                 this.addSlot(new Slot(playerInv, col + row * 9 + 9, 8 + col * 18, 162 + row * 18));
             }
         }
 
-        // ⭕ ホットバー（X=8, Y=220）
+        // ホットバー（X=8, Y=220）
         for (int col = 0; col < 9; col++) {
             this.addSlot(new Slot(playerInv, col, 8 + col * 18, 220));
         }
