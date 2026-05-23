@@ -12,31 +12,33 @@ import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.entity.BlockEntity;
 
 public class ArcaneCraftingMenu extends AbstractContainerMenu {
 
     private final Container container;
     private final ContainerData data;
 
-    // ─── GUI 寸法 ─────────────────────────────────────────────────────────
-    // テクスチャ (177x246) 上のスロット配置
-    // 円の中心: (88, 75), 半径: 48px
-    private static final int CX = 88;
-    private static final int CY = 75;
+    // ─── GUI 寸法 ────────────────────────────────────────────────────────
+    // テクスチャ (175x243) 上のスロット配置
+    // 円の中心: (87, 54), 半径: 40px
+    private static final int CX = 87;
+    private static final int CY = 54;
+    private static final int R = 40;
 
     /**
      * 周囲8スロット [x, y] の左上座標（スロット幅は16px → 中心 = 座標+8）
      * スロット0: 上, スロット1: 右上, … 時計回り
      */
     private static final int[][] CIRCLE_POS = {
-            { 80,  19 },   // 0: 上
-            { 113, 33 },   // 1: 右上
-            { 128, 67 },   // 2: 右
-            { 113, 100},   // 3: 右下
-            {  80, 115},   // 4: 下
-            {  46, 100},   // 5: 左下
-            {  32,  67},   // 6: 左
-            {  46,  33},   // 7: 左上
+            { CX - 8,      CY - R - 8 }, // 0: 上
+            { CX + 26,     CY - 32 },    // 1: 右上
+            { CX + R - 8,  CY - 8 },     // 2: 右
+            { CX + 26,     CY + 16 },    // 3: 右下
+            { CX - 8,      CY + R - 8 }, // 4: 下
+            { CX - 42,     CY + 16 },    // 5: 左下
+            { CX - R - 8,  CY - 8 },     // 6: 左
+            { CX - 42,     CY - 32 },    // 7: 左上
     };
 
     // ─── ファクトリ（パケットから生成） ───────────────────────────────────
@@ -63,10 +65,12 @@ public class ArcaneCraftingMenu extends AbstractContainerMenu {
 
         // ── 中央スロット（入力兼出力: スロット8）─────────────────────────
         //    アイテムを直接置いて、完成品がここに入る
-        this.addSlot(new Slot(container, 8, CX - 8, CY - 8));  // 左上(80, 67)
+        this.addSlot(new Slot(container, 8, CX - 8, CY - 8) {
+            @Override public boolean mayPlace(ItemStack stack) { return false; }
+        });
 
-        // ── 触媒スロット（スロット9）─────────────────────────────────────
-        this.addSlot(new CatalystSlot(container, 9, 152, 0));
+        // ── 触媒スロット（スロット9）右下の魔法陣外───────────────────────
+        this.addSlot(new CatalystSlot(container, 9, 152, 48));
 
         // ── プレイヤーインベントリ（3行）────────────────────────────────
         for (int row = 0; row < 3; row++) {
@@ -74,7 +78,7 @@ public class ArcaneCraftingMenu extends AbstractContainerMenu {
                 this.addSlot(new Slot(playerInv,
                         col + row * 9 + 9,
                         8 + col * 18,
-                        161 + row * 18));
+                        135 + row * 18));
             }
         }
 
@@ -83,7 +87,7 @@ public class ArcaneCraftingMenu extends AbstractContainerMenu {
             this.addSlot(new Slot(playerInv,
                     col,
                     8 + col * 18,
-                    219));
+                    193));
         }
 
         this.addDataSlots(this.data);
@@ -91,14 +95,19 @@ public class ArcaneCraftingMenu extends AbstractContainerMenu {
 
     // ─── BlockEntity 取得ヘルパー ─────────────────────────────────────────
     private static Container getBlockEntity(Inventory playerInv, FriendlyByteBuf buf) {
-        var be = playerInv.player.level().getBlockEntity(buf.readBlockPos());
+        BlockEntity be = playerInv.player.level().getBlockEntity(buf.readBlockPos());
         if (be instanceof ArcaneCraftingTableBlockEntity acbe) return acbe;
         return new SimpleContainer(10);
     }
 
     // ─── クライアントへの同期値 ───────────────────────────────────────────
-    public int  getCraftingTick()   { return data.get(0); }
-    public boolean isCraftingActive() { return data.get(1) == 1; }
+    public int getCraftingTick() {
+        return data.get(0);
+    }
+
+    public boolean isCraftingActive() {
+        return data.get(1) == 1;
+    }
 
     // ─── Shift クリック ───────────────────────────────────────────────────
     @Override
@@ -139,6 +148,5 @@ public class ArcaneCraftingMenu extends AbstractContainerMenu {
         CatalystSlot(Container container, int slot, int x, int y) {
             super(container, slot, x, y);
         }
-        // 触媒スロットには何でも入れられるが、クラフト中は取り出し不可
     }
 }
