@@ -19,27 +19,22 @@ public class ArcaneCraftingMenu extends AbstractContainerMenu {
     private final Container container;
     private final ContainerData data;
 
-    // ─── GUI 寸法 ────────────────────────────────────────────────────────
-    // テクスチャ (175x243) 上のスロット配置
-    // 円の中心: (87, 54), 半径: 40px
-    private static final int CX = 87;
-    private static final int CY = 54;
-    private static final int R = 40;
-
-    /**
-     * 周囲8スロット [x, y] の左上座標（スロット幅は16px → 中心 = 座標+8）
-     * スロット0: 上, スロット1: 右上, … 時計回り
-     */
+    // ─── スロット位置（画像から正確に読み取った） ────────────────────────
     private static final int[][] CIRCLE_POS = {
-            { CX - 8,      CY - R - 8 }, // 0: 上
-            { CX + 26,     CY - 32 },    // 1: 右上
-            { CX + R - 8,  CY - 8 },     // 2: 右
-            { CX + 26,     CY + 16 },    // 3: 右下
-            { CX - 8,      CY + R - 8 }, // 4: 下
-            { CX - 42,     CY + 16 },    // 5: 左下
-            { CX - R - 8,  CY - 8 },     // 6: 左
-            { CX - 42,     CY - 32 },    // 7: 左上
+            { 75, 14 },   // 0: 上
+            { 113, 22 },  // 1: 右上
+            { 129, 46 },  // 2: 右
+            { 113, 70 },  // 3: 右下
+            { 75, 78 },   // 4: 下
+            { 37, 70 },   // 5: 左下
+            { 21, 46 },   // 6: 左
+            { 37, 22 },   // 7: 左上
     };
+
+    private static final int CENTER_X = 75;
+    private static final int CENTER_Y = 46;
+    private static final int CATALYST_X = 152;
+    private static final int CATALYST_Y = 48;
 
     // ─── ファクトリ（パケットから生成） ───────────────────────────────────
     public ArcaneCraftingMenu(int windowId, Inventory playerInv, FriendlyByteBuf buf) {
@@ -64,21 +59,20 @@ public class ArcaneCraftingMenu extends AbstractContainerMenu {
         }
 
         // ── 中央スロット（入力兼出力: スロット8）─────────────────────────
-        //    アイテムを直接置いて、完成品がここに入る
-        this.addSlot(new Slot(container, 8, CX - 8, CY - 8) {
+        this.addSlot(new Slot(container, 8, CENTER_X, CENTER_Y) {
             @Override public boolean mayPlace(ItemStack stack) { return false; }
         });
 
         // ── 触媒スロット（スロット9）右下の魔法陣外───────────────────────
-        this.addSlot(new CatalystSlot(container, 9, 152, 48));
+        this.addSlot(new CatalystSlot(container, 9, CATALYST_X, CATALYST_Y));
 
-        // ── プレイヤーインベントリ（3行）────────────────────────────────
+        // ── プレイヤーインベントリ（3行9列）──────────────────────────────
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
                 this.addSlot(new Slot(playerInv,
                         col + row * 9 + 9,
                         8 + col * 18,
-                        135 + row * 18));
+                        116 + row * 18));
             }
         }
 
@@ -87,7 +81,7 @@ public class ArcaneCraftingMenu extends AbstractContainerMenu {
             this.addSlot(new Slot(playerInv,
                     col,
                     8 + col * 18,
-                    193));
+                    174));
         }
 
         this.addDataSlots(this.data);
@@ -127,8 +121,8 @@ public class ArcaneCraftingMenu extends AbstractContainerMenu {
                 // クラフト/触媒スロット → インベントリへ
                 if (!this.moveItemStackTo(stack, 10, 46, false)) return ItemStack.EMPTY;
             } else {
-                // インベントリ → クラフトスロット（0-8）
-                if (!this.moveItemStackTo(stack, 0, 9, false)) return ItemStack.EMPTY;
+                // インベントリ → クラフトスロット（0-9）
+                if (!this.moveItemStackTo(stack, 0, 10, false)) return ItemStack.EMPTY;
             }
 
             if (stack.isEmpty()) slot.set(ItemStack.EMPTY);
