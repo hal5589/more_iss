@@ -1,6 +1,5 @@
 package nekotori_haru.more_iss.blockentity;
 
-import com.mojang.logging.LogUtils;
 import nekotori_haru.more_iss.More_iss;
 import nekotori_haru.more_iss.menu.ArcaneCraftingMenu;
 import nekotori_haru.more_iss.network.ModNetwork;
@@ -11,9 +10,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
-import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.Container;
 import net.minecraft.world.WorldlyContainer;
 import net.minecraft.world.entity.player.Inventory;
@@ -30,256 +26,254 @@ import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.ItemStackHandler;
 import net.minecraftforge.network.PacketDistributor;
-import org.slf4j.Logger;
+import org.jetbrains.annotations.Nullable;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.util.Collection;
 import java.util.Optional;
 
-public class ArcaneCraftingTableBlockEntity extends BaseContainerBlockEntity implements WorldlyContainer {
-    private static final Logger LOGGER = LogUtils.getLogger();
+public class ArcaneCraftingTableBlockEntity extends BaseContainerBlockEntity
+        implements WorldlyContainer {
 
-    public static final int CRAFT_DURATION = 100;
-    public static final int CATALYST_MAX_STACK = 1024;
-
-    private final ItemStackHandler itemHandler = new ItemStackHandler(10) {
+    // ─── インベントリ ─────────────────────────────────────────────────────
+    // スロット 0-7 : 周囲材料
+    // スロット 8   : 中央（入力兼出力） ← 材料を置く → 完成後ここに完成品
+    // スロット 9   : 触媒
+    public final ItemStackHandler itemHandler = new ItemStackHandler(10) {
         @Override
         protected void onContentsChanged(int slot) {
             setChanged();
-            if (level != null && !level.isClientSide) {
-                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
-            }
-        }
-
-        @Override
-        public int getSlotLimit(int slot) {
-            return slot == 9 ? CATALYST_MAX_STACK : super.getSlotLimit(slot);
         }
     };
+    private final LazyOptional<IItemHandler> itemHandlerOpt =
+            LazyOptional.of(() -> itemHandler);
 
-    private final LazyOptional<IItemHandler> lazyItemHandler = LazyOptional.of(() -> itemHandler);
-
-    private int craftingTick = 0;
-    private boolean isCraftingActive = false;
+    // ─── クラフト状態 ─────────────────────────────────────────────────────
+    int     craftingTick     = 0;
+    boolean isCraftingActive = false;
 
     public final ContainerData dataAccess = new ContainerData() {
-        @Override public int get(int id) { return id == 0 ? craftingTick : (isCraftingActive ? 1 : 0); }
-        @Override public void set(int id, int val) { if (id == 0) craftingTick = val; else isCraftingActive = (val == 1); }
+        @Override public int get(int idx) {
+            return switch (idx) {
+                case 0 -> craftingTick;
+                case 1 -> isCraftingActive ? 1 : 0;
+                default -> 0;
+            };
+        }
+        @Override public void set(int idx, int value) {
+            switch (idx) {
+                case 0 -> craftingTick     = value;
+                case 1 -> isCraftingActive = (value == 1);
+            }
+        }
         @Override public int getCount() { return 2; }
     };
 
+    // ─── コンストラクタ ───────────────────────────────────────────────────
     public ArcaneCraftingTableBlockEntity(BlockPos pos, BlockState state) {
         super(More_iss.ARCANE_CRAFTING_TABLE_BE.get(), pos, state);
     }
 
+    // ─── クライアント側のアニメーション更新用メソッド ────────────────────────
     public void setCraftingAnimFromPacket(int craftingTick, boolean active) {
         this.craftingTick = craftingTick;
         this.isCraftingActive = active;
     }
 
-    /**
-     * 毎tick実行されるクラフト主処理
-     */
-    public static void serverTick(Level level, BlockPos pos, BlockState state, ArcaneCraftingTableBlockEntity be) {
-        if (level.isClientSide) {
-            return;
-        }
-
-        LOGGER.info("[DEBUG] serverTick called at {}", pos);
+    // ─── サーバーTickロジック ─────────────────────────────────────────────
+    public static void serverTick(Level level, BlockPos pos, BlockState state,
+                                  ArcaneCraftingTableBlockEntity be) {
+        if (level.isClientSide) return;
 
         RecipeWrapper wrapper = new RecipeWrapper(be);
 
-        // デバッグ: アイテムの状態を確認
-        for (int i = 0; i < 10; i++) {
-            ItemStack item = be.itemHandler.getStackInSlot(i);
-            if (!item.isEmpty()) {
-                LOGGER.info("[DEBUG] Slot {}: {} x{}", i, item.getItem().getName(item).getString(), item.getCount());
-            }
-        }
-
-        // 🔥 デバッグ: 登録されているレシピを全て列挙
-        Collection<ArcaneCraftingRecipe> allRecipes = level.getRecipeManager()
-                .getAllRecipesFor(ArcaneCraftingRecipeType.INSTANCE);
-        LOGGER.info("[DEBUG] Total recipes registered: {}", allRecipes.size());
-        for (ArcaneCraftingRecipe recipe : allRecipes) {
-            LOGGER.info("[DEBUG]   - Recipe ID: {}", recipe.getId());
-        }
-
-        Optional<ArcaneCraftingRecipe> recipeOpt = level.getRecipeManager()
-                .getRecipeFor(ArcaneCraftingRecipeType.INSTANCE, wrapper, level);
-
-        LOGGER.info("[DEBUG] Recipe found: {}", recipeOpt.isPresent());
+        // レシピ検索（matches()がスロット0-8の材料+触媒を確認）
+        Optional<ArcaneCraftingRecipe> recipeOpt =
+                level.getRecipeManager().getRecipeFor(
+                        ArcaneCraftingRecipeType.INSTANCE, wrapper, level);
 
         if (recipeOpt.isPresent()) {
             ArcaneCraftingRecipe recipe = recipeOpt.get();
-            ItemStack outputSlot = be.itemHandler.getStackInSlot(8);
-            ItemStack resultStack = recipe.getResultItem(level.registryAccess());
+            ItemStack result = recipe.assemble(wrapper, level.registryAccess());
 
-            LOGGER.info("[DEBUG] Recipe result: {}", resultStack.getItem().getName(resultStack).getString());
-            LOGGER.info("[DEBUG] Output slot: {} x{}",
-                    outputSlot.isEmpty() ? "EMPTY" : outputSlot.getItem().getName(outputSlot).getString(),
-                    outputSlot.getCount());
-
-            if (resultStack.isEmpty()) {
-                LOGGER.warn("[DEBUG] Result stack is empty!");
+            if (result.isEmpty()) {
                 be.stopCrafting(level, pos);
                 return;
             }
 
-            boolean canCraft = outputSlot.isEmpty() ||
-                    (ItemStack.isSameItemSameTags(outputSlot, resultStack) &&
-                            outputSlot.getCount() + resultStack.getCount() <= outputSlot.getMaxStackSize());
-
-            LOGGER.info("[DEBUG] Can craft: {}", canCraft);
-
-            if (canCraft) {
-                if (!be.isCraftingActive) {
-                    LOGGER.info("[DEBUG] Starting craft...");
-                    be.isCraftingActive = true;
-                    be.craftingTick = CRAFT_DURATION;
-                    be.setChanged();
-
-                    ModNetwork.CHANNEL.send(
-                            PacketDistributor.TRACKING_CHUNK.with(() -> level.getChunkAt(pos)),
-                            new PacketSyncCraftingAnim(pos, be.craftingTick, true)
-                    );
-                }
-
-                if (be.craftingTick > 0) {
-                    be.craftingTick--;
-
-                    if (be.craftingTick % 5 == 0) {
-                        ModNetwork.CHANNEL.send(
-                                PacketDistributor.TRACKING_CHUNK.with(() -> level.getChunkAt(pos)),
-                                new PacketSyncCraftingAnim(pos, be.craftingTick, true)
-                        );
-                    }
-                    be.setChanged();
-                }
-
-                if (be.craftingTick <= 0) {
-                    LOGGER.info("[DEBUG] Crafting finished!");
-                    be.finishCrafting(recipe);
-                }
-            } else {
-                LOGGER.info("[DEBUG] Cannot craft, stopping...");
-                be.stopCrafting(level, pos);
+            // クラフト開始
+            if (!be.isCraftingActive) {
+                be.isCraftingActive = true;
+                be.craftingTick     = 100;
+                be.setChanged();
+                sendAnimPacket(level, pos, be, true);
             }
+
+            // カウントダウン
+            if (be.craftingTick > 0) {
+                be.craftingTick--;
+                if (be.craftingTick % 5 == 0) {
+                    sendAnimPacket(level, pos, be, true);
+                }
+                be.setChanged();
+            }
+
+            // 完成
+            if (be.craftingTick <= 0) {
+                be.finishCrafting(recipe);
+            }
+
         } else {
-            LOGGER.warn("[DEBUG] No recipe found!");
             be.stopCrafting(level, pos);
         }
     }
 
+    // ─── クラフト完了 ────────────────────────────────────────────────────
     private void finishCrafting(ArcaneCraftingRecipe recipe) {
+        // 周囲8スロット（0-7）の材料を1個ずつ消費
         for (int i = 0; i < 8; i++) {
             itemHandler.extractItem(i, 1, false);
         }
+
+        // 中央スロット（8）の材料を消費
+        // ingredients[8] が EMPTY でない（中央材料あり）場合のみ消費
+        var ings = recipe.getIngredients();
+        if (ings.size() > 8 && !ings.get(8).isEmpty()) {
+            itemHandler.extractItem(8, 1, false);
+        }
+
+        // 触媒消費（レシピ設定による）
         if (recipe.isCatalystConsumed()) {
             itemHandler.extractItem(9, 1, false);
         }
-        ItemStack result = recipe.getResultItem(level.registryAccess()).copy();
-        ItemStack currentOutput = itemHandler.getStackInSlot(8);
-        if (currentOutput.isEmpty()) {
-            itemHandler.setStackInSlot(8, result);
-        } else {
-            currentOutput.grow(result.getCount());
-            itemHandler.setStackInSlot(8, currentOutput);
-        }
+
+        // 完成品をスロット8に格納
+        // 消費後のスロット8は空になっているので直接セット
+        ItemStack result = recipe.assemble(new RecipeWrapper(this), this.level.registryAccess()).copy();
+        itemHandler.setStackInSlot(8, result);
 
         isCraftingActive = false;
-        craftingTick = 0;
+        craftingTick     = 0;
         setChanged();
 
-        if (level != null) {
+        // 完了パケット送信
+        if (this.level != null) {
             ModNetwork.CHANNEL.send(
-                    PacketDistributor.TRACKING_CHUNK.with(() -> level.getChunkAt(worldPosition)),
-                    new PacketSyncCraftingAnim(worldPosition, 0, false)
-            );
+                    PacketDistributor.TRACKING_CHUNK.with(
+                            () -> this.level.getChunkAt(this.worldPosition)),
+                    new PacketSyncCraftingAnim(this.worldPosition, 0, false));
         }
     }
 
+    // ─── クラフト中断 ────────────────────────────────────────────────────
     private void stopCrafting(Level level, BlockPos pos) {
-        if (isCraftingActive) {
-            isCraftingActive = false;
-            craftingTick = 0;
-            setChanged();
+        if (!isCraftingActive) return;
+        isCraftingActive = false;
+        craftingTick     = 0;
+        setChanged();
+        ModNetwork.CHANNEL.send(
+                PacketDistributor.TRACKING_CHUNK.with(
+                        () -> level.getChunkAt(pos)),
+                new PacketSyncCraftingAnim(pos, 0, false));
+    }
 
-            ModNetwork.CHANNEL.send(
-                    PacketDistributor.TRACKING_CHUNK.with(() -> level.getChunkAt(pos)),
-                    new PacketSyncCraftingAnim(pos, 0, false)
-            );
+    // ─── アニメパケット送信ヘルパー ───────────────────────────────────────
+    private static void sendAnimPacket(Level level, BlockPos pos,
+                                       ArcaneCraftingTableBlockEntity be,
+                                       boolean active) {
+        ModNetwork.CHANNEL.send(
+                PacketDistributor.TRACKING_CHUNK.with(
+                        () -> level.getChunkAt(pos)),
+                new PacketSyncCraftingAnim(pos, be.craftingTick, active));
+    }
+
+    // ─── IItemHandler Capability ─────────────────────────────────────────
+    @Override
+    public <T> LazyOptional<T> getCapability(
+            Capability<T> cap,
+            @Nullable Direction side) {
+        if (cap == ForgeCapabilities.ITEM_HANDLER) {
+            return itemHandlerOpt.cast();
         }
-    }
-
-    @Override public int getContainerSize() { return 10; }
-    @Override public boolean isEmpty() {
-        for (int i = 0; i < 10; i++) if (!itemHandler.getStackInSlot(i).isEmpty()) return false;
-        return true;
-    }
-    @Override public ItemStack getItem(int slot) { return itemHandler.getStackInSlot(slot); }
-    @Override public ItemStack removeItem(int slot, int amount) { return itemHandler.extractItem(slot, amount, false); }
-    @Override public ItemStack removeItemNoUpdate(int slot) {
-        ItemStack stack = itemHandler.getStackInSlot(slot);
-        itemHandler.setStackInSlot(slot, ItemStack.EMPTY);
-        return stack;
-    }
-    @Override public void setItem(int slot, ItemStack stack) { itemHandler.setStackInSlot(slot, stack); }
-    @Override public boolean stillValid(Player player) { return Container.stillValidBlockEntity(this, player); }
-    @Override public void clearContent() { for (int i = 0; i < 10; i++) itemHandler.setStackInSlot(i, ItemStack.EMPTY); }
-
-    @Override
-    public void load(CompoundTag tag) {
-        super.load(tag);
-        itemHandler.deserializeNBT(tag.getCompound("Inventory"));
-        this.craftingTick = tag.getInt("CraftingTick");
-        this.isCraftingActive = tag.getBoolean("CraftingActive");
-    }
-
-    @Override
-    protected void saveAdditional(CompoundTag tag) {
-        super.saveAdditional(tag);
-        tag.put("Inventory", itemHandler.serializeNBT());
-        tag.putInt("CraftingTick", craftingTick);
-        tag.putBoolean("CraftingActive", isCraftingActive);
-    }
-
-    @Override public int[] getSlotsForFace(Direction side) { return new int[]{0,1,2,3,4,5,6,7,8,9}; }
-    @Override public boolean canPlaceItemThroughFace(int slot, ItemStack stack, @Nullable Direction dir) { return slot != 8; }
-    @Override public boolean canTakeItemThroughFace(int slot, ItemStack stack, Direction dir) { return slot == 8; }
-
-    @Override protected Component getDefaultName() { return Component.translatable("container.more_iss.arcane_crafting_table"); }
-    @Override protected AbstractContainerMenu createMenu(int id, Inventory inv) { return new ArcaneCraftingMenu(id, inv, this); }
-
-    @Override public CompoundTag getUpdateTag() { return saveWithoutMetadata(); }
-    @Override public Packet<ClientGamePacketListener> getUpdatePacket() { return ClientboundBlockEntityDataPacket.create(this); }
-
-    @Nonnull
-    @Override
-    public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> cap, @Nullable Direction side) {
-        if (cap == ForgeCapabilities.ITEM_HANDLER) return lazyItemHandler.cast();
         return super.getCapability(cap, side);
     }
 
     @Override
     public void invalidateCaps() {
         super.invalidateCaps();
-        lazyItemHandler.invalidate();
+        itemHandlerOpt.invalidate();
     }
 
+    // ─── WorldlyContainer ─────────────────────────────────────────────────
+    @Override public int getContainerSize()                      { return 10; }
+    @Override public boolean isEmpty() {
+        for (int i = 0; i < 10; i++)
+            if (!itemHandler.getStackInSlot(i).isEmpty()) return false;
+        return true;
+    }
+    @Override public ItemStack getItem(int slot)                 { return itemHandler.getStackInSlot(slot); }
+    @Override public ItemStack removeItem(int slot, int count)   { return itemHandler.extractItem(slot, count, false); }
+    @Override public ItemStack removeItemNoUpdate(int slot) {
+        ItemStack s = itemHandler.getStackInSlot(slot);
+        itemHandler.setStackInSlot(slot, ItemStack.EMPTY);
+        return s;
+    }
+    @Override public void setItem(int slot, ItemStack stack)     { itemHandler.setStackInSlot(slot, stack); }
+    @Override public boolean stillValid(Player player)           { return Container.stillValidBlockEntity(this, player); }
+    @Override public void clearContent() {
+        for (int i = 0; i < 10; i++) itemHandler.setStackInSlot(i, ItemStack.EMPTY);
+    }
+    @Override public int[] getSlotsForFace(Direction side)       { return new int[]{0,1,2,3,4,5,6,7,8,9}; }
+    @Override public boolean canPlaceItemThroughFace(int slot, ItemStack stack, @Nullable Direction dir) {
+        return slot != 8;   // 外部からは中央スロットへ自動投入不可
+    }
+    @Override public boolean canTakeItemThroughFace(int slot, ItemStack stack, Direction dir) {
+        return slot == 8;   // 中央スロット（完成品）のみ取り出し可
+    }
+
+    // ─── NBT保存・読み込み ───────────────────────────────────────────────
+    @Override
+    public void load(CompoundTag tag) {
+        super.load(tag);
+        itemHandler.deserializeNBT(tag.getCompound("Inventory"));
+        craftingTick     = tag.getInt("CraftingTick");
+        isCraftingActive = tag.getBoolean("CraftingActive");
+    }
+
+    @Override
+    protected void saveAdditional(CompoundTag tag) {
+        super.saveAdditional(tag);
+        tag.put("Inventory",         itemHandler.serializeNBT());
+        tag.putInt("CraftingTick",   craftingTick);
+        tag.putBoolean("CraftingActive", isCraftingActive);
+    }
+
+    // ─── AbstractContainerMenu ────────────────────────────────────────────
+    @Override
+    protected Component getDefaultName() {
+        return Component.translatable("container.more_iss.arcane_crafting_table");
+    }
+
+    @Override
+    protected AbstractContainerMenu createMenu(int windowId, Inventory inv) {
+        return new ArcaneCraftingMenu(windowId, inv, this);
+    }
+
+    // ─── 内部クラス: RecipeWrapper ────────────────────────────────────────
     public static class RecipeWrapper implements Container {
         private final ArcaneCraftingTableBlockEntity be;
         public RecipeWrapper(ArcaneCraftingTableBlockEntity be) { this.be = be; }
 
-        @Override public int getContainerSize() { return 10; }
-        @Override public boolean isEmpty() { return be.isEmpty(); }
-        @Override public ItemStack getItem(int slot) { return be.getItem(slot); }
-        @Override public ItemStack removeItem(int slot, int amount) { return be.removeItem(slot, amount); }
-        @Override public ItemStack removeItemNoUpdate(int slot) { return be.removeItemNoUpdate(slot); }
-        @Override public void setItem(int slot, ItemStack stack) { be.setItem(slot, stack); }
-        @Override public boolean stillValid(Player player) { return true; }
-        @Override public void clearContent() { be.clearContent(); }
-        @Override public void setChanged() { be.setChanged(); }
+        @Override public int getContainerSize()                   { return 10; }
+        @Override public boolean isEmpty()                        { return be.isEmpty(); }
+        @Override public ItemStack getItem(int slot)              { return be.itemHandler.getStackInSlot(slot); }
+        @Override public ItemStack removeItem(int s, int c)       { return be.itemHandler.extractItem(s, c, false); }
+        @Override public ItemStack removeItemNoUpdate(int s) {
+            ItemStack st = be.itemHandler.getStackInSlot(s);
+            be.itemHandler.setStackInSlot(s, ItemStack.EMPTY);
+            return st;
+        }
+        @Override public void setItem(int s, ItemStack stack)     { be.itemHandler.setStackInSlot(s, stack); }
+        @Override public void setChanged()                        { be.setChanged(); }
+        @Override public boolean stillValid(Player p)             { return true; }
+        @Override public void clearContent()                      { be.clearContent(); }
     }
 }

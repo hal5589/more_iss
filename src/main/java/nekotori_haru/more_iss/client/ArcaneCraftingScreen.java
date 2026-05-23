@@ -1,164 +1,258 @@
 package nekotori_haru.more_iss.client;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.*;
 import nekotori_haru.more_iss.menu.ArcaneCraftingMenu;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
-import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.item.ItemStack;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 public class ArcaneCraftingScreen extends AbstractContainerScreen<ArcaneCraftingMenu> {
 
     private static final ResourceLocation TEXTURE =
             new ResourceLocation("more_iss", "textures/gui/arcane_crafting_table.png");
 
-    // GUI サイズ
-    private static final int GUI_WIDTH  = 196;
-    private static final int GUI_HEIGHT = 210;
+    // GUI サイズ（テクスチャに合わせる）
+    private static final int GUI_WIDTH  = 177;
+    private static final int GUI_HEIGHT = 246;
 
-    // 円形スロット中心・半径 (スクリーン座標変換後)
+    // 8スロットが並ぶ円の中心・半径（スロット座標の中心）
     private static final int CX = 88;
     private static final int CY = 75;
-    private static final int R  = 48;
 
-    // アニメーション用パーティクル状態
-    private float animProgress = 0f; // 0.0~1.0
+    // クラフトアニメーション進捗 (0.0 = 開始, 1.0 = 完成直前)
+    private float animProgress = 0f;
 
-    // 円形スロットの角度 (ラジアン)
+    // 完成フラッシュ演出用
+    private float burstProgress = 0f;   // 0→1 で完成エフェクト再生
+    private boolean wasCrafting = false;
+
+    // 周囲→中央 へ流れるパーティクル
+    private static final class Particle {
+        float srcX, srcY;   // 出発スロット中心（GUI相対）
+        float t;            // 0.0(出発) → 1.0(中央到着)
+        float speed;
+        int color;
+    }
+    private final List<Particle> particles = new ArrayList<>();
+    private final Random rng = new Random();
+
     private static final double[] ANGLES = {
-        -Math.PI / 2,               // 0: 上      (270°)
-        -Math.PI / 2 + Math.PI/4,   // 1: 右上
-        0,                           // 2: 右
-        Math.PI / 4,                 // 3: 右下
-        Math.PI / 2,                 // 4: 下
-        Math.PI / 2 + Math.PI/4,    // 5: 左下
-        Math.PI,                     // 6: 左
-        Math.PI + Math.PI/4,        // 7: 左上
+            -Math.PI / 2,           // 0: 上
+            -Math.PI / 4,           // 1: 右上
+            0,                     // 2: 右
+            Math.PI / 4,           // 3: 右下
+            Math.PI / 2,           // 4: 下
+            3 * Math.PI / 4,       // 5: 左下
+            Math.PI,               // 6: 左
+            -3 * Math.PI / 4,       // 7: 左上
     };
+    private static final double RADIUS = 48.0;
 
     public ArcaneCraftingScreen(ArcaneCraftingMenu menu, Inventory inv, Component title) {
         super(menu, inv, title);
         this.imageWidth  = GUI_WIDTH;
         this.imageHeight = GUI_HEIGHT;
-        this.inventoryLabelY = this.imageHeight - 94;
+        // インベントリラベルの Y 位置
+        this.inventoryLabelY = GUI_HEIGHT - 94;
     }
 
+    // ─── 背景描画 ────────────────────────────────────────────────────────────
     @Override
     protected void renderBg(GuiGraphics gfx, float partialTick, int mouseX, int mouseY) {
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        RenderSystem.setShader(net.minecraft.client.renderer.GameRenderer::getPositionTexShader);
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
         RenderSystem.setShaderTexture(0, TEXTURE);
 
-        int x = (width  - imageWidth)  / 2;
-        int y = (height - imageHeight) / 2;
+        int x = (this.width  - GUI_WIDTH)  / 2;
+        int y = (this.height - GUI_HEIGHT) / 2;
 
-        // 背景テクスチャ描画
-        gfx.blit(TEXTURE, x, y, 0, 0, imageWidth, imageHeight);
+        // テクスチャをそのまま描画（256x256 テクスチャの左上 177x246 を使用）
+        gfx.blit(TEXTURE, x, y, 0, 0, GUI_WIDTH, GUI_HEIGHT);
 
-        // ---- クラフトアニメーション描画 ----
-        if (menu.isCraftingActive()) {
-            int tick   = menu.getCraftingTick();
-            float prog = 1f - (tick / (float) nekotori_haru.more_iss.blockentity.ArcaneCraftingTableBlockEntity.CRAFT_DURATION);
+        // ── クラフト中のみエフェクト ──────────────────────────────────────
+        boolean crafting = menu.isCraftingActive();
+        int tick = menu.getCraftingTick();
+
+        if (crafting) {
+            float prog = 1f - tick / 100f;   // 0.0(開始) → 1.0(完成)
             animProgress = prog;
 
-            drawCraftingAnimation(gfx, x, y, prog, partialTick);
+            // パーティクル生成
+            spawnParticles(x, y);
+
+            // パーティクル描画
+            drawParticles(gfx, x, y, partialTick);
+
+            // 回転リング
+            drawRotatingRing(gfx, x + CX, y + CY, prog);
+
+            // 完成間近（prog > 0.85）でフラッシュ予備動作
+            if (prog > 0.85f) {
+                float pulse = (prog - 0.85f) / 0.15f;
+                int alpha = (int)(pulse * 80);
+                gfx.fill(x + CX - 8, y + CY - 8,
+                        x + CX + 8, y + CY + 8,
+                        (alpha << 24) | 0xCCAAFF);
+            }
+
+            wasCrafting = true;
         } else {
             animProgress = 0f;
+            particles.clear();
+
+            // 完成バースト演出
+            if (wasCrafting && burstProgress == 0f) {
+                burstProgress = 0.01f;
+            }
+            wasCrafting = false;
+        }
+
+        // バースト演出（クラフト完了後）
+        if (burstProgress > 0f) {
+            drawBurstEffect(gfx, x + CX, y + CY, burstProgress);
+            burstProgress += 0.045f;
+            if (burstProgress >= 1f) burstProgress = 0f;
         }
     }
 
-    /**
-     * クラフト演出描画
-     * prog: 0.0(開始) → 1.0(完成直前)
-     *
-     * 演出: 円形スロットのアイテムが中心に向かって移動する光のストリーク
-     */
-    private void drawCraftingAnimation(GuiGraphics gfx, int baseX, int baseY, float prog, float partialTick) {
-        int scx = baseX + CX; // 画面上の中心X
-        int scy = baseY + CY; // 画面上の中心Y
-
-        // 各スロットから中心へ向かうエフェクト
-        for (int i = 0; i < 8; i++) {
-            // スロットの元の位置
-            double angle = ANGLES[i];
-            double sx = scx + Math.cos(angle) * R;
-            double sy = scy + Math.sin(angle) * R;
-
-            // prog に応じて中心に近づく
-            double px = sx + (scx - sx) * prog;
-            double py = sy + (scy - sy) * prog;
-
-            // 光のドットを描画 (GUI Graphics で矩形)
-            int dotX = (int) px;
-            int dotY = (int) py;
-            int alpha = (int)(255 * (1f - prog * 0.5f));
-
-            // 外側のグロー (大きい半透明)
-            gfx.fill(dotX - 3, dotY - 3, dotX + 3, dotY + 3,
-                    (alpha / 3 << 24) | 0xAA88FF);
-            // 内側のコア (小さい不透明)
-            gfx.fill(dotX - 1, dotY - 1, dotX + 1, dotY + 1,
-                    (alpha << 24) | 0xFFEEFF);
-        }
-
-        // 中心の輝き (prog が高いほど大きく)
-        if (prog > 0.7f) {
-            float flare = (prog - 0.7f) / 0.3f;
-            int flareSize = (int)(flare * 12);
-            int flareAlpha = (int)(flare * 200);
-            gfx.fill(scx - flareSize, scy - flareSize, scx + flareSize, scy + flareSize,
-                    (flareAlpha << 24) | 0xCCAAFF);
-        }
-
-        // 回転する円形エフェクト
-        drawRotatingRing(gfx, scx, scy, prog);
-    }
-
-    /** 回転する光の輪 */
-    private void drawRotatingRing(GuiGraphics gfx, int cx, int cy, float prog) {
-        int numDots = 12;
-        long time = System.currentTimeMillis();
-        float rot = (time % 2000) / 2000f * (float)(Math.PI * 2);
-        float ringR = R * (1f - prog * 0.6f); // 収縮
-
-        for (int i = 0; i < numDots; i++) {
-            float angle = rot + (float)(i * Math.PI * 2 / numDots);
-            int dx = (int)(cx + Math.cos(angle) * ringR);
-            int dy = (int)(cy + Math.sin(angle) * ringR);
-            int alpha = (int)(180 * (float)(i + 1) / numDots);
-            gfx.fill(dx - 1, dy - 1, dx + 1, dy + 1, (alpha << 24) | 0x9966FF);
-        }
-    }
-
-    @Override
-    public void render(GuiGraphics gfx, int mouseX, int mouseY, float partialTick) {
-        renderBackground(gfx);
-        super.render(gfx, mouseX, mouseY, partialTick);
-        renderTooltip(gfx, mouseX, mouseY);
-    }
-
+    // ─── ラベル描画 ──────────────────────────────────────────────────────────
     @Override
     protected void renderLabels(GuiGraphics gfx, int mouseX, int mouseY) {
-        // タイトル
-        gfx.drawString(font, title, titleLabelX, titleLabelY, 0x404040, false);
+        // タイトルラベル（GUI上部）
+        gfx.drawString(this.font, this.title,
+                this.titleLabelX, this.titleLabelY, 0xE0D0FF, false);
+
         // インベントリラベル
-        gfx.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, 0x404040, false);
+        gfx.drawString(this.font, this.playerInventoryTitle,
+                this.inventoryLabelX, this.inventoryLabelY, 0x404040, false);
 
-        // 触媒ラベル
-        gfx.drawString(font,
-                net.minecraft.network.chat.Component.translatable("gui.more_iss.catalyst"),
-                132, 0, 0x6644AA, false);
+        // 触媒スロットのラベル
+        gfx.drawString(this.font,
+                Component.translatable("gui.more_iss.catalyst"),
+                152 - 28, 2, 0xA090CC, false);
 
-        // クラフト中プログレスバー
+        // クラフト中：進捗バー
         if (menu.isCraftingActive()) {
-            int barW = (int)(52 * (1f - menu.getCraftingTick() /
-                    (float) nekotori_haru.more_iss.blockentity.ArcaneCraftingTableBlockEntity.CRAFT_DURATION));
-            gfx.fill(68, 158, 68 + barW, 163, 0xFF9966FF);
-            gfx.fill(68, 158, 120, 163, 0x44FFFFFF); // 背景
+            int tick = menu.getCraftingTick();
+            int barW = (int)(52f * (1f - tick / 100f));
+            // 背景（暗い）
+            gfx.fill(68, 158, 120, 163, 0xFF2A0A5B);
+            // 前景（紫）
+            gfx.fill(68, 158, 68 + barW, 163, 0xFF9B59EF);
         }
+    }
+
+    // ─── 全体描画 ────────────────────────────────────────────────────────────
+    @Override
+    public void render(GuiGraphics gfx, int mouseX, int mouseY, float partialTick) {
+        this.renderBackground(gfx);
+        super.render(gfx, mouseX, mouseY, partialTick);
+        this.renderTooltip(gfx, mouseX, mouseY);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // パーティクル管理
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /** クラフト中、各スロット位置からパーティクルを一定確率でスポーン */
+    private void spawnParticles(int guiLeft, int guiTop) {
+        // 空のスロットからはスポーンしない（描画コストを抑える）
+        for (int i = 0; i < 8; i++) {
+            if (!menu.getSlot(i).hasItem()) continue;
+            if (rng.nextFloat() > 0.18f) continue;   // スポーン確率
+
+            double angle = ANGLES[i];
+            float sx = CX + (float)(RADIUS * Math.cos(angle));
+            float sy = CY + (float)(RADIUS * Math.sin(angle));
+
+            Particle p = new Particle();
+            p.srcX  = sx;
+            p.srcY  = sy;
+            p.t     = 0f;
+            p.speed = 0.018f + rng.nextFloat() * 0.012f;
+            // 青紫〜白の色
+            int r = 140 + rng.nextInt(80);
+            int g = 80  + rng.nextInt(80);
+            int b = 220 + rng.nextInt(36);
+            p.color = (r << 16) | (g << 8) | b;
+            particles.add(p);
+        }
+        // 古いパーティクルを削除
+        particles.removeIf(p -> p.t >= 1f);
+    }
+
+    /** パーティクルを描画し、t を進める */
+    private void drawParticles(GuiGraphics gfx, int guiLeft, int guiTop, float partialTick) {
+        for (Particle p : particles) {
+            // 補間: 出発点 → 中心
+            float x = p.srcX + (CX - p.srcX) * p.t;
+            float y = p.srcY + (CY - p.srcY) * p.t;
+
+            // 中央に近いほど小さく・薄くなる
+            float size = (float)(1.0 - p.t * 0.5);          // 1.0 → 0.5
+            int alpha  = (int)(255 * (1f - p.t * 0.7f));
+
+            int px = guiLeft + (int)x;
+            int py = guiTop  + (int)y;
+            int half = Math.max(1, (int)size);
+
+            int color = (alpha << 24) | p.color;
+            gfx.fill(px - half, py - half, px + half, py + half, color);
+
+            p.t += p.speed;
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // 回転リング（クラフト進捗に応じて拡大）
+    // ═══════════════════════════════════════════════════════════════════════
+    private void drawRotatingRing(GuiGraphics gfx, int cx, int cy, float prog) {
+        int   dotCount = 12;
+        long  ms       = System.currentTimeMillis();
+        float baseAngle = (ms % 2000) / 2000f * (float)(2 * Math.PI);
+        float ringR    = 10f + prog * 12f;   // progに応じて広がる（10→22px）
+
+        for (int i = 0; i < dotCount; i++) {
+            float a   = baseAngle + i * (float)(2 * Math.PI) / dotCount;
+            int   rx  = cx + (int)(Math.cos(a) * ringR);
+            int   ry  = cy + (int)(Math.sin(a) * ringR);
+            int   alpha = (int)(140 + 100 * (i + 1f) / dotCount);
+            int   color = (alpha << 24) | 0x9966FF;
+            gfx.fill(rx - 1, ry - 1, rx + 1, ry + 1, color);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // 完成バースト演出（中央から四方に光が弾ける）
+    // ═══════════════════════════════════════════════════════════════════════
+    private void drawBurstEffect(GuiGraphics gfx, int cx, int cy, float t) {
+        // t: 0→1、easeOut
+        float ease = 1f - (1f - t) * (1f - t);
+
+        // 光線を8方向に伸ばす
+        int rayCount = 12;
+        for (int i = 0; i < rayCount; i++) {
+            double angle = i * 2 * Math.PI / rayCount;
+            float len   = ease * 28f;
+            float alpha = (1f - ease) * 255f;
+            int   x2    = cx + (int)(Math.cos(angle) * len);
+            int   y2    = cy + (int)(Math.sin(angle) * len);
+
+            int ia = (int)alpha;
+            int color = (ia << 24) | 0xFFEEFF;
+            gfx.fill(x2 - 1, y2 - 1, x2 + 1, y2 + 1, color);
+        }
+
+        // 中央フラッシュ（白→透明）
+        int fa    = (int)((1f - ease) * 200f);
+        int fSize = (int)(ease * 14f);
+        gfx.fill(cx - fSize, cy - fSize, cx + fSize, cy + fSize,
+                (fa << 24) | 0xFFFFFF);
     }
 }
