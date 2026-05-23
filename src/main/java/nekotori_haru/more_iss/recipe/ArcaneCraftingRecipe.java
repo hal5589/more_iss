@@ -1,24 +1,26 @@
 package nekotori_haru.more_iss.recipe;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import io.redspace.ironsspellbooks.api.registry.SpellRegistry;
-import io.redspace.ironsspellbooks.api.spells.ISpellContainer;
-import io.redspace.ironsspellbooks.api.spells.SpellData;
+import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
 import nekotori_haru.more_iss.blockentity.ArcaneCraftingTableBlockEntity;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.RegistryAccess;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.TagParser;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.Item;
+import net.minecraft.util.GsonHelper;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.registries.ForgeRegistries;
-
-import javax.annotation.Nullable;
-import java.util.List;
+import org.jetbrains.annotations.Nullable;
 
 public class ArcaneCraftingRecipe
         implements Recipe<ArcaneCraftingTableBlockEntity.RecipeWrapper> {
@@ -28,137 +30,329 @@ public class ArcaneCraftingRecipe
     private final ResourceLocation id;
     private final NonNullList<Ingredient> ingredients;
 
-    // ⭕ 追加：各スロットに要求されるスクロールの呪文IDとレベルを保持するリスト
-    private final List<ResourceLocation> requiredSpellIds;
-    private final List<Integer> requiredSpellLevels;
+    // 🔥 NBT 検証情報（各スロット用）
+    private final NonNullList<CompoundTag> ingredientNBTs;
+    private final NonNullList<String> requiredSpells;  // required_spell
+    private final NonNullList<Integer> requiredLevels;  // required_level
 
     private final Ingredient catalyst;
-    private final boolean    catalystConsume;
-    private final ItemStack  result;
+    private final CompoundTag catalystNBT;
+    private final boolean catalystConsume;
 
-    @Nullable private final ResourceLocation spellId;
-    private final int spellLevel;
+    // 🔥 結果タイプ
+    private final ItemStack result;
+    private final String resultSpellId;
+    private final int resultSpellLevel;
 
     public ArcaneCraftingRecipe(ResourceLocation id,
                                 NonNullList<Ingredient> ingredients,
-                                List<ResourceLocation> requiredSpellIds,
-                                List<Integer> requiredSpellLevels,
+                                NonNullList<CompoundTag> ingredientNBTs,
+                                NonNullList<String> requiredSpells,
+                                NonNullList<Integer> requiredLevels,
                                 Ingredient catalyst,
+                                CompoundTag catalystNBT,
                                 boolean catalystConsume,
                                 ItemStack result,
-                                @Nullable ResourceLocation spellId,
-                                int spellLevel) {
+                                String resultSpellId,
+                                int resultSpellLevel) {
         this.id = id;
         this.ingredients = ingredients;
-        this.requiredSpellIds = requiredSpellIds;
-        this.requiredSpellLevels = requiredSpellLevels;
+        this.ingredientNBTs = ingredientNBTs;
+        this.requiredSpells = requiredSpells;
+        this.requiredLevels = requiredLevels;
         this.catalyst = catalyst;
+        this.catalystNBT = catalystNBT;
         this.catalystConsume = catalystConsume;
         this.result = result;
-        this.spellId = spellId;
-        this.spellLevel = spellLevel;
-    }
-
-    private ItemStack createSecureScroll() {
-        Item scrollItem = ForgeRegistries.ITEMS.getValue(new ResourceLocation("irons_spellbooks", "scroll"));
-        if (scrollItem == null || scrollItem == Items.AIR) {
-            return ItemStack.EMPTY;
-        }
-        ItemStack scroll = new ItemStack(scrollItem, 1);
-        if (this.spellId != null) {
-            ISpellContainer.createScrollContainer(
-                    SpellRegistry.getSpell(this.spellId),
-                    this.spellLevel,
-                    scroll
-            );
-        }
-        return scroll;
-    }
-
-    // ⭕ あなたの環境のISSの仕様（getActiveSpells() が List<SpellSlot> を返す）に完全に適合させた判定ロジック
-    private boolean checkScrollValidity(ItemStack clickedStack, int slotIndex) {
-        if (slotIndex >= requiredSpellIds.size() || slotIndex >= requiredSpellLevels.size()) return true;
-
-        ResourceLocation reqSpell = requiredSpellIds.get(slotIndex);
-        int reqLevel = requiredSpellLevels.get(slotIndex);
-
-        // JSON側でこのスロットに呪文制限が指定されていない（null）ならパス
-        if (reqSpell == null) return true;
-
-        // 実際に置かれたアイテムからISSの呪文コンテナを安全に取得
-        if (!ISpellContainer.isSpellContainer(clickedStack)) return false;
-
-        // ⭕ 以前のバージョンで存在が確認できているメソッドを使用
-        ISpellContainer container = ISpellContainer.getSpellContainer(clickedStack);
-        if (container == null) return false;
-
-        // ⭕ エラーメッセージの通り、getActiveSpells() を呼び出して List<SpellSlot> で受け取る
-        java.util.List<io.redspace.ironsspellbooks.api.spells.SpellSlot> slots = container.getActiveSpells();
-        if (slots == null || slots.isEmpty()) return false;
-
-        // スクロール内の最初のスロット（呪文データ）を検証
-        io.redspace.ironsspellbooks.api.spells.SpellSlot slot = slots.get(0);
-        if (slot == null || slot.getSpell() == null) return false;
-
-        // 呪文のID、および指定レベルが完全に一致しているか判定
-        return slot.getSpell().getSpellId().equals(reqSpell.toString()) && slot.getLevel() == reqLevel;
+        this.resultSpellId = resultSpellId;
+        this.resultSpellLevel = resultSpellLevel;
     }
 
     // ─── matches ──────────────────────────────────────────────────────────
     @Override
     public boolean matches(ArcaneCraftingTableBlockEntity.RecipeWrapper inv, Level level) {
-        // 周囲8スロット (0-7)
-        for (int i = 0; i < 8; i++) {
+        // 周囲8スロット (0-7) + 中央スロット (8)
+        for (int i = 0; i < 9; i++) {
             Ingredient ing = ingredients.get(i);
             ItemStack stack = inv.getItem(i);
+
+            // アイテムが空でないかチェック
             if (ing.isEmpty()) {
                 if (!stack.isEmpty()) return false;
-            } else {
-                if (!ing.test(stack)) return false;
-                // ⭕ スクロールの呪文内容チェックを実行
-                if (!checkScrollValidity(stack, i)) return false;
+                continue;
             }
-        }
 
-        // 中央スロット (8)
-        if (ingredients.size() > 8) {
-            Ingredient centerIng = ingredients.get(8);
-            ItemStack centerStack = inv.getItem(8);
-            if (!centerIng.isEmpty()) {
-                if (!centerIng.test(centerStack)) return false;
-                // ⭕ スクロールの呪文内容チェックを実行（インデックス8）
-                if (!checkScrollValidity(centerStack, 8)) return false;
+            // アイテム種別チェック
+            if (!ing.test(stack)) return false;
+
+            // 🔥 NBT タグチェック（スクロールの場合）
+            CompoundTag nbt = ingredientNBTs.get(i);
+            if (nbt != null && !nbt.isEmpty()) {
+                if (!stack.hasTag()) return false;
+                CompoundTag stackTag = stack.getTag();
+                if (stackTag == null || !nbtMatches(stackTag, nbt)) {
+                    return false;
+                }
+            }
+
+            // 🔥 Required Spell チェック（スクロール限定）
+            String requiredSpell = requiredSpells.get(i);
+            if (requiredSpell != null && !requiredSpell.isEmpty()) {
+                if (!isScrollWithSpell(stack, requiredSpell, requiredLevels.get(i))) {
+                    return false;
+                }
             }
         }
 
         // 触媒スロット (9)
         if (catalyst != null && catalyst != Ingredient.EMPTY && catalyst.getItems().length > 0) {
-            if (!catalyst.test(inv.getItem(9))) return false;
+            ItemStack catalystStack = inv.getItem(9);
+            if (!catalyst.test(catalystStack)) return false;
+
+            // 触媒の NBT チェック
+            if (catalystNBT != null && !catalystNBT.isEmpty()) {
+                if (!catalystStack.hasTag()) return false;
+                CompoundTag stackTag = catalystStack.getTag();
+                if (stackTag == null || !nbtMatches(stackTag, catalystNBT)) {
+                    return false;
+                }
+            }
         }
 
         return true;
     }
 
+    // 🔥 NBT が一致しているか（部分一致：recipeNBT が stackTag に含まれている）
+    private boolean nbtMatches(CompoundTag stackTag, CompoundTag recipeNBT) {
+        for (String key : recipeNBT.getAllKeys()) {
+            if (!stackTag.contains(key)) return false;
+            if (!stackTag.get(key).equals(recipeNBT.get(key))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // 🔥 スクロールが指定された魔法を持っているか
+    private boolean isScrollWithSpell(ItemStack stack, String requiredSpellId, int requiredLevel) {
+        // irons_spellbooks:scroll アイテムであることを確認
+        if (!stack.getItem().toString().contains("scroll")) {
+            return false;
+        }
+
+        CompoundTag tag = stack.getTag();
+        if (tag == null) return false;
+
+        // ISB_spell.data.id と base_lvl を確認
+        if (tag.contains("ISB_spell")) {
+            CompoundTag spellTag = tag.getCompound("ISB_spell");
+            if (spellTag.contains("data")) {
+                CompoundTag dataTag = spellTag.getCompound("data");
+                String spellId = dataTag.getString("id");
+                int level = dataTag.getInt("base_lvl");
+
+                return spellId.equals(requiredSpellId) && level >= requiredLevel;
+            }
+        }
+        return false;
+    }
+
+    // ─── assemble ─────────────────────────────────────────────────────────
     @Override
     public ItemStack assemble(ArcaneCraftingTableBlockEntity.RecipeWrapper inv, RegistryAccess reg) {
-        if (this.spellId != null) {
-            return createSecureScroll();
+        // 🔥 result_spell がある場合、魔法スクロールを生成
+        if (resultSpellId != null && !resultSpellId.isEmpty()) {
+            // irons_spellbooks:scroll アイテムを取得
+            var scrollItem = ForgeRegistries.ITEMS.getValue(new ResourceLocation("irons_spellbooks:scroll"));
+
+            if (scrollItem != null) {
+                ItemStack spellScroll = new ItemStack(scrollItem);
+                CompoundTag tag = new CompoundTag();
+
+                CompoundTag spellTag = new CompoundTag();
+                CompoundTag dataTag = new CompoundTag();
+                dataTag.putString("id", resultSpellId);
+                dataTag.putInt("base_lvl", resultSpellLevel);
+                spellTag.put("data", dataTag);
+                tag.put("ISB_spell", spellTag);
+
+                spellScroll.setTag(tag);
+                return spellScroll;
+            }
         }
+
+        // 通常のアイテム結果
         return result.copy();
     }
 
+    // ─── その他 ───────────────────────────────────────────────────────────
     @Override public boolean canCraftInDimensions(int w, int h) { return true; }
-    @Override public ItemStack getResultItem(RegistryAccess reg) { return this.spellId != null ? createSecureScroll() : result; }
+    @Override public ItemStack getResultItem(RegistryAccess reg) { return result; }
     @Override public ResourceLocation getId() { return id; }
     @Override public RecipeSerializer<?> getSerializer() { return ArcaneCraftingRecipeSerializer.INSTANCE; }
     @Override public RecipeType<?> getType() { return ArcaneCraftingRecipeType.INSTANCE; }
 
-    public NonNullList<Ingredient> getIngredients() { return ingredients; }
-    public List<ResourceLocation> getRequiredSpellIds() { return requiredSpellIds; }
-    public List<Integer> getRequiredSpellLevels() { return requiredSpellLevels; }
-    public Ingredient getCatalyst() { return catalyst; }
     public boolean isCatalystConsumed() { return catalystConsume; }
-    public ItemStack getResult() { return result; }
-    @Nullable public ResourceLocation getSpellId() { return spellId; }
-    public int getSpellLevel() { return spellLevel; }
+    public NonNullList<Ingredient> getIngredients() { return ingredients; }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Serializer
+    // ═══════════════════════════════════════════════════════════════════════
+    public static class ArcaneCraftingRecipeSerializer
+            implements RecipeSerializer<ArcaneCraftingRecipe> {
+
+        public static final ArcaneCraftingRecipeSerializer INSTANCE =
+                new ArcaneCraftingRecipeSerializer();
+
+        @Override
+        public ArcaneCraftingRecipe fromJson(ResourceLocation id, JsonObject json) {
+            JsonArray arr = GsonHelper.getAsJsonArray(json, "ingredients");
+            NonNullList<Ingredient> ingredients = NonNullList.withSize(9, Ingredient.EMPTY);
+            NonNullList<CompoundTag> ingredientNBTs = NonNullList.withSize(9, new CompoundTag());
+            NonNullList<String> requiredSpells = NonNullList.withSize(9, "");
+            NonNullList<Integer> requiredLevels = NonNullList.withSize(9, 1);
+
+            for (int i = 0; i < 9 && i < arr.size(); i++) {
+                JsonElement elem = arr.get(i);
+                if (elem.isJsonObject()) {
+                    JsonObject obj = elem.getAsJsonObject();
+
+                    if (!obj.entrySet().isEmpty()) {
+                        // Ingredient 解析
+                        if (obj.has("item")) {
+                            ingredients.set(i, Ingredient.fromJson(obj));
+                        }
+
+                        // 🔥 NBT 解析
+                        if (obj.has("nbt")) {
+                            String nbtStr = obj.get("nbt").getAsString();
+                            try {
+                                ingredientNBTs.set(i, TagParser.parseTag(nbtStr));
+                            } catch (Exception e) {
+                                System.err.println("Failed to parse NBT: " + nbtStr);
+                            }
+                        }
+
+                        // 🔥 Required Spell 解析
+                        if (obj.has("required_spell")) {
+                            requiredSpells.set(i, obj.get("required_spell").getAsString());
+                        }
+                        if (obj.has("required_level")) {
+                            requiredLevels.set(i, obj.get("required_level").getAsInt());
+                        }
+                    }
+                }
+            }
+
+            // ── catalyst ──────────────────────────────────────────────────
+            Ingredient catalyst = Ingredient.EMPTY;
+            CompoundTag catalystNBT = new CompoundTag();
+            if (json.has("catalyst")) {
+                JsonElement ce = json.get("catalyst");
+                if (ce.isJsonObject()) {
+                    JsonObject catalystObj = ce.getAsJsonObject();
+                    catalyst = Ingredient.fromJson(catalystObj);
+
+                    if (catalystObj.has("nbt")) {
+                        String nbtStr = catalystObj.get("nbt").getAsString();
+                        try {
+                            catalystNBT = TagParser.parseTag(nbtStr);
+                        } catch (Exception e) {
+                            System.err.println("Failed to parse catalyst NBT: " + nbtStr);
+                        }
+                    }
+                }
+            }
+
+            // ── catalyst_consume ──────────────────────────────────────────
+            boolean catalystConsume = GsonHelper.getAsBoolean(json, "catalyst_consume", false);
+
+            // 🔥 ── result_spell ───────────────────────────────────────────
+            String resultSpellId = "";
+            int resultSpellLevel = 1;
+            ItemStack result = ItemStack.EMPTY;
+
+            if (json.has("result_spell")) {
+                JsonObject resultSpellObj = json.getAsJsonObject("result_spell");
+                resultSpellId = GsonHelper.getAsString(resultSpellObj, "id");
+                resultSpellLevel = GsonHelper.getAsInt(resultSpellObj, "level", 1);
+            } else if (json.has("result")) {
+                // ── result（通常アイテム） ────────────────────────────────
+                JsonObject resultObj = GsonHelper.getAsJsonObject(json, "result");
+                String itemId = GsonHelper.getAsString(resultObj, "item");
+                int count = GsonHelper.getAsInt(resultObj, "count", 1);
+
+                var item = ForgeRegistries.ITEMS.getValue(new ResourceLocation(itemId));
+                result = (item != null && item != net.minecraft.world.item.Items.AIR)
+                        ? new ItemStack(item, count)
+                        : ItemStack.EMPTY;
+            }
+
+            return new ArcaneCraftingRecipe(id, ingredients, ingredientNBTs, requiredSpells, requiredLevels,
+                    catalyst, catalystNBT, catalystConsume, result, resultSpellId, resultSpellLevel);
+        }
+
+        @Override
+        public ArcaneCraftingRecipe fromNetwork(ResourceLocation id, FriendlyByteBuf buf) {
+            int size = buf.readVarInt();
+            NonNullList<Ingredient> ingredients = NonNullList.withSize(size, Ingredient.EMPTY);
+            for (int i = 0; i < size; i++) {
+                ingredients.set(i, Ingredient.fromNetwork(buf));
+            }
+
+            NonNullList<CompoundTag> ingredientNBTs = NonNullList.withSize(size, new CompoundTag());
+            for (int i = 0; i < size; i++) {
+                if (buf.readBoolean()) {
+                    ingredientNBTs.set(i, buf.readNbt());
+                }
+            }
+
+            NonNullList<String> requiredSpells = NonNullList.withSize(size, "");
+            NonNullList<Integer> requiredLevels = NonNullList.withSize(size, 1);
+            for (int i = 0; i < size; i++) {
+                requiredSpells.set(i, buf.readUtf());
+                requiredLevels.set(i, buf.readInt());
+            }
+
+            Ingredient catalyst = Ingredient.fromNetwork(buf);
+            CompoundTag catalystNBT = buf.readBoolean() ? buf.readNbt() : new CompoundTag();
+            boolean catalystConsume = buf.readBoolean();
+            ItemStack result = buf.readItem();
+            String resultSpellId = buf.readUtf();
+            int resultSpellLevel = buf.readInt();
+
+            return new ArcaneCraftingRecipe(id, ingredients, ingredientNBTs, requiredSpells, requiredLevels,
+                    catalyst, catalystNBT, catalystConsume, result, resultSpellId, resultSpellLevel);
+        }
+
+        @Override
+        public void toNetwork(FriendlyByteBuf buf, ArcaneCraftingRecipe recipe) {
+            buf.writeVarInt(recipe.ingredients.size());
+            for (Ingredient ing : recipe.ingredients) {
+                ing.toNetwork(buf);
+            }
+
+            for (CompoundTag nbt : recipe.ingredientNBTs) {
+                buf.writeBoolean(!nbt.isEmpty());
+                if (!nbt.isEmpty()) {
+                    buf.writeNbt(nbt);
+                }
+            }
+
+            for (int i = 0; i < recipe.requiredSpells.size(); i++) {
+                buf.writeUtf(recipe.requiredSpells.get(i));
+                buf.writeInt(recipe.requiredLevels.get(i));
+            }
+
+            recipe.catalyst.toNetwork(buf);
+            buf.writeBoolean(!recipe.catalystNBT.isEmpty());
+            if (!recipe.catalystNBT.isEmpty()) {
+                buf.writeNbt(recipe.catalystNBT);
+            }
+            buf.writeBoolean(recipe.catalystConsume);
+            buf.writeItem(recipe.result);
+            buf.writeUtf(recipe.resultSpellId);
+            buf.writeInt(recipe.resultSpellLevel);
+        }
+    }
 }
