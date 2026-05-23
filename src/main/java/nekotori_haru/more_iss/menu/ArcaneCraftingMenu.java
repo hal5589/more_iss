@@ -19,128 +19,110 @@ public class ArcaneCraftingMenu extends AbstractContainerMenu {
     private final Container container;
     private final ContainerData data;
 
-    // ─── スロット位置（画像から正確に読み取った） ────────────────────────
-    private static final int[][] CIRCLE_POS = {
-            { 75, 14 },   // 0: 上
-            { 113, 22 },  // 1: 右上
-            { 129, 46 },  // 2: 右
-            { 113, 70 },  // 3: 右下
-            { 75, 78 },   // 4: 下
-            { 37, 70 },   // 5: 左下
-            { 21, 46 },   // 6: 左
-            { 37, 22 },   // 7: 左上
+    // あなたが修正してくれた正確な円形スロット座標（人力修正版）
+    public static final int[][] CIRCLE_POS = {
+            { 80, 14 },   // 0: 上
+            { 120, 31 },  // 1: 右上
+            { 136, 71 },  // 2: 右
+            { 120, 111 }, // 3: 右下
+            { 80, 127 },  // 4: 下
+            { 40, 111 },  // 5: 左下
+            { 23, 71 },   // 6: 左
+            { 40, 31 }    // 7: 左上
     };
 
-    private static final int CENTER_X = 75;
-    private static final int CENTER_Y = 46;
-    private static final int CATALYST_X = 152;
-    private static final int CATALYST_Y = 48;
+    public static final int CENTER_X = 80;  // 中央スロット
+    public static final int CENTER_Y = 71;
+    public static final int CATALYST_X = 152; // 触媒スロット
+    public static final int CATALYST_Y = 127;
 
-    // ─── ファクトリ（パケットから生成） ───────────────────────────────────
     public ArcaneCraftingMenu(int windowId, Inventory playerInv, FriendlyByteBuf buf) {
         this(windowId, playerInv, getBlockEntity(playerInv, buf));
     }
 
-    // ─── メインコンストラクタ ─────────────────────────────────────────────
     public ArcaneCraftingMenu(int windowId, Inventory playerInv, Container container) {
         super(More_iss.ARCANE_CRAFTING_MENU.get(), windowId);
         this.container = container;
 
-        // ContainerData（サーバー←→クライアント同期）
         if (container instanceof ArcaneCraftingTableBlockEntity be) {
             this.data = be.dataAccess;
         } else {
             this.data = new SimpleContainerData(2);
         }
 
-        // ── クラフトスロット（周囲8個）───────────────────────────────────
+        // 0-7: 周囲の円形スロット
         for (int i = 0; i < 8; i++) {
-            this.addSlot(new Slot(container, i, CIRCLE_POS[i][0], CIRCLE_POS[i][1]));
+            this.addSlot(new Slot(container, i, CIRCLE_POS[i][0], CIRCLE_POS[i][1]) {
+                @Override public boolean mayPlace(ItemStack stack) { return !ArcaneCraftingMenu.this.isCraftingActive(); }
+                @Override public boolean mayPickup(Player playerIn) { return !ArcaneCraftingMenu.this.isCraftingActive(); }
+            });
         }
 
-        // ── 中央スロット（入力兼出力: スロット8）─────────────────────────
+        // 8: 中央スロット
         this.addSlot(new Slot(container, 8, CENTER_X, CENTER_Y) {
-            @Override public boolean mayPlace(ItemStack stack) { return false; }
+            @Override public boolean mayPlace(ItemStack stack) { return !ArcaneCraftingMenu.this.isCraftingActive(); }
+            @Override public boolean mayPickup(Player playerIn) { return !ArcaneCraftingMenu.this.isCraftingActive(); }
         });
 
-        // ── 触媒スロット（スロット9）右下の魔法陣外───────────────────────
+        // 9: 触媒スロット
         this.addSlot(new CatalystSlot(container, 9, CATALYST_X, CATALYST_Y));
 
-        // ── プレイヤーインベントリ（3行9列）──────────────────────────────
+        // ⭕ 1pxのズレ解消（X=8, Y=162）
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
-                this.addSlot(new Slot(playerInv,
-                        col + row * 9 + 9,
-                        8 + col * 18,
-                        116 + row * 18));
+                this.addSlot(new Slot(playerInv, col + row * 9 + 9, 8 + col * 18, 162 + row * 18));
             }
         }
 
-        // ── ホットバー ───────────────────────────────────────────────────
+        // ⭕ ホットバー（X=8, Y=220）
         for (int col = 0; col < 9; col++) {
-            this.addSlot(new Slot(playerInv,
-                    col,
-                    8 + col * 18,
-                    174));
+            this.addSlot(new Slot(playerInv, col, 8 + col * 18, 220));
         }
 
         this.addDataSlots(this.data);
     }
 
-    // ─── BlockEntity 取得ヘルパー ─────────────────────────────────────────
     private static Container getBlockEntity(Inventory playerInv, FriendlyByteBuf buf) {
         BlockEntity be = playerInv.player.level().getBlockEntity(buf.readBlockPos());
         if (be instanceof ArcaneCraftingTableBlockEntity acbe) return acbe;
         return new SimpleContainer(10);
     }
 
-    // ─── クライアントへの同期値 ───────────────────────────────────────────
-    public int getCraftingTick() {
-        return data.get(0);
-    }
+    public int getCraftingTick() { return data.get(0); }
+    public boolean isCraftingActive() { return data.get(1) == 1; }
 
-    public boolean isCraftingActive() {
-        return data.get(1) == 1;
-    }
-
-    // ─── Shift クリック ───────────────────────────────────────────────────
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
         ItemStack result = ItemStack.EMPTY;
         Slot slot = this.slots.get(index);
-
         if (slot.hasItem()) {
             ItemStack stack = slot.getItem();
             result = stack.copy();
-
             if (index == 8) {
-                // 中央スロット → インベントリへ
                 if (!this.moveItemStackTo(stack, 10, 46, true)) return ItemStack.EMPTY;
                 slot.onQuickCraft(stack, result);
             } else if (index < 10) {
-                // クラフト/触媒スロット → インベントリへ
                 if (!this.moveItemStackTo(stack, 10, 46, false)) return ItemStack.EMPTY;
             } else {
-                // インベントリ → クラフトスロット（0-9）
-                if (!this.moveItemStackTo(stack, 0, 10, false)) return ItemStack.EMPTY;
+                if (!this.moveItemStackTo(stack, 8, 9, false)) {
+                    if (!this.moveItemStackTo(stack, 0, 8, false)) {
+                        if (!this.moveItemStackTo(stack, 9, 10, false)) {
+                            return ItemStack.EMPTY;
+                        }
+                    }
+                }
             }
-
             if (stack.isEmpty()) slot.set(ItemStack.EMPTY);
             else slot.setChanged();
         }
-
         return result;
     }
 
     @Override
-    public boolean stillValid(Player player) {
-        return this.container.stillValid(player);
-    }
+    public boolean stillValid(Player player) { return this.container.stillValid(player); }
 
-    // ─── 触媒専用スロット ─────────────────────────────────────────────────
     static class CatalystSlot extends Slot {
-        CatalystSlot(Container container, int slot, int x, int y) {
-            super(container, slot, x, y);
-        }
+        CatalystSlot(Container container, int slot, int x, int y) { super(container, slot, x, y); }
+        @Override public boolean mayPlace(ItemStack stack) { return true; }
     }
 }

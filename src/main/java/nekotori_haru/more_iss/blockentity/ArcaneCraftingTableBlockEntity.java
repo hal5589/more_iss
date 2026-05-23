@@ -16,6 +16,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerData;
+import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BaseContainerBlockEntity;
@@ -33,9 +34,8 @@ import java.util.Optional;
 public class ArcaneCraftingTableBlockEntity extends BaseContainerBlockEntity
         implements WorldlyContainer {
 
-    // ─── インベントリ ─────────────────────────────────────────────────────
     // スロット 0-7 : 周囲材料
-    // スロット 8   : 中央（入力兼出力） ← 材料を置く → 完成後ここに完成品
+    // スロット 8   : 中央（入力兼出力）← プレイヤーがここに入力素材を置ける
     // スロット 9   : 触媒
     public final ItemStackHandler itemHandler = new ItemStackHandler(10) {
         @Override
@@ -46,7 +46,6 @@ public class ArcaneCraftingTableBlockEntity extends BaseContainerBlockEntity
     private final LazyOptional<IItemHandler> itemHandlerOpt =
             LazyOptional.of(() -> itemHandler);
 
-    // ─── クラフト状態 ─────────────────────────────────────────────────────
     int     craftingTick     = 0;
     boolean isCraftingActive = false;
 
@@ -67,25 +66,21 @@ public class ArcaneCraftingTableBlockEntity extends BaseContainerBlockEntity
         @Override public int getCount() { return 2; }
     };
 
-    // ─── コンストラクタ ───────────────────────────────────────────────────
     public ArcaneCraftingTableBlockEntity(BlockPos pos, BlockState state) {
         super(More_iss.ARCANE_CRAFTING_TABLE_BE.get(), pos, state);
     }
 
-    // ─── クライアント側のアニメーション更新用メソッド ────────────────────────
     public void setCraftingAnimFromPacket(int craftingTick, boolean active) {
         this.craftingTick = craftingTick;
         this.isCraftingActive = active;
     }
 
-    // ─── サーバーTickロジック ─────────────────────────────────────────────
     public static void serverTick(Level level, BlockPos pos, BlockState state,
                                   ArcaneCraftingTableBlockEntity be) {
         if (level.isClientSide) return;
 
         RecipeWrapper wrapper = new RecipeWrapper(be);
 
-        // レシピ検索（matches()がスロット0-8の材料+触媒を確認）
         Optional<ArcaneCraftingRecipe> recipeOpt =
                 level.getRecipeManager().getRecipeFor(
                         ArcaneCraftingRecipeType.INSTANCE, wrapper, level);
@@ -99,15 +94,13 @@ public class ArcaneCraftingTableBlockEntity extends BaseContainerBlockEntity
                 return;
             }
 
-            // クラフト開始
             if (!be.isCraftingActive) {
                 be.isCraftingActive = true;
-                be.craftingTick     = 100;
+                be.craftingTick     = 60;
                 be.setChanged();
                 sendAnimPacket(level, pos, be, true);
             }
 
-            // カウントダウン
             if (be.craftingTick > 0) {
                 be.craftingTick--;
                 if (be.craftingTick % 5 == 0) {
@@ -116,7 +109,6 @@ public class ArcaneCraftingTableBlockEntity extends BaseContainerBlockEntity
                 be.setChanged();
             }
 
-            // 完成
             if (be.craftingTick <= 0) {
                 be.finishCrafting(recipe);
             }
@@ -126,27 +118,21 @@ public class ArcaneCraftingTableBlockEntity extends BaseContainerBlockEntity
         }
     }
 
-    // ─── クラフト完了 ────────────────────────────────────────────────────
     private void finishCrafting(ArcaneCraftingRecipe recipe) {
-        // 周囲8スロット（0-7）の材料を1個ずつ消費
         for (int i = 0; i < 8; i++) {
             itemHandler.extractItem(i, 1, false);
         }
 
-        // 中央スロット（8）の材料を消費
-        // ingredients[8] が EMPTY でない（中央材料あり）場合のみ消費
         var ings = recipe.getIngredients();
         if (ings.size() > 8 && !ings.get(8).isEmpty()) {
-            itemHandler.extractItem(8, 1, false);
+            itemHandler.extractItem(8, 1, false); // 中央のベース素材を1個消費
         }
 
-        // 触媒消費（レシピ設定による）
         if (recipe.isCatalystConsumed()) {
             itemHandler.extractItem(9, 1, false);
         }
 
-        // 完成品をスロット8に格納
-        // 消費後のスロット8は空になっているので直接セット
+        // 完成品を中央（スロット8）に上書きセット
         ItemStack result = recipe.assemble(new RecipeWrapper(this), this.level.registryAccess()).copy();
         itemHandler.setStackInSlot(8, result);
 
@@ -154,7 +140,6 @@ public class ArcaneCraftingTableBlockEntity extends BaseContainerBlockEntity
         craftingTick     = 0;
         setChanged();
 
-        // 完了パケット送信
         if (this.level != null) {
             ModNetwork.CHANNEL.send(
                     PacketDistributor.TRACKING_CHUNK.with(
@@ -163,7 +148,6 @@ public class ArcaneCraftingTableBlockEntity extends BaseContainerBlockEntity
         }
     }
 
-    // ─── クラフト中断 ────────────────────────────────────────────────────
     private void stopCrafting(Level level, BlockPos pos) {
         if (!isCraftingActive) return;
         isCraftingActive = false;
@@ -175,7 +159,6 @@ public class ArcaneCraftingTableBlockEntity extends BaseContainerBlockEntity
                 new PacketSyncCraftingAnim(pos, 0, false));
     }
 
-    // ─── アニメパケット送信ヘルパー ───────────────────────────────────────
     private static void sendAnimPacket(Level level, BlockPos pos,
                                        ArcaneCraftingTableBlockEntity be,
                                        boolean active) {
@@ -185,11 +168,8 @@ public class ArcaneCraftingTableBlockEntity extends BaseContainerBlockEntity
                 new PacketSyncCraftingAnim(pos, be.craftingTick, active));
     }
 
-    // ─── IItemHandler Capability ─────────────────────────────────────────
     @Override
-    public <T> LazyOptional<T> getCapability(
-            Capability<T> cap,
-            @Nullable Direction side) {
+    public <T> LazyOptional<T> getCapability(Capability<T> cap, @Nullable Direction side) {
         if (cap == ForgeCapabilities.ITEM_HANDLER) {
             return itemHandlerOpt.cast();
         }
@@ -202,7 +182,6 @@ public class ArcaneCraftingTableBlockEntity extends BaseContainerBlockEntity
         itemHandlerOpt.invalidate();
     }
 
-    // ─── WorldlyContainer ─────────────────────────────────────────────────
     @Override public int getContainerSize()                      { return 10; }
     @Override public boolean isEmpty() {
         for (int i = 0; i < 10; i++)
@@ -221,15 +200,19 @@ public class ArcaneCraftingTableBlockEntity extends BaseContainerBlockEntity
     @Override public void clearContent() {
         for (int i = 0; i < 10; i++) itemHandler.setStackInSlot(i, ItemStack.EMPTY);
     }
+
     @Override public int[] getSlotsForFace(Direction side)       { return new int[]{0,1,2,3,4,5,6,7,8,9}; }
+
+    // ─── 自動搬入出の制限（クラフト中でなければ中央への出し入れも可能にする） ───
     @Override public boolean canPlaceItemThroughFace(int slot, ItemStack stack, @Nullable Direction dir) {
-        return slot != 8;   // 外部からは中央スロットへ自動投入不可
+        if (slot == 8) return !this.isCraftingActive; // クラフト中でなければ中央にパイプでベースを搬入可能
+        return true;
     }
     @Override public boolean canTakeItemThroughFace(int slot, ItemStack stack, Direction dir) {
-        return slot == 8;   // 中央スロット（完成品）のみ取り出し可
+        if (slot == 8) return !this.isCraftingActive; // クラフト中でなければ中央の成果物をパイプで搬出可能
+        return false;
     }
 
-    // ─── NBT保存・読み込み ───────────────────────────────────────────────
     @Override
     public void load(CompoundTag tag) {
         super.load(tag);
@@ -246,7 +229,6 @@ public class ArcaneCraftingTableBlockEntity extends BaseContainerBlockEntity
         tag.putBoolean("CraftingActive", isCraftingActive);
     }
 
-    // ─── AbstractContainerMenu ────────────────────────────────────────────
     @Override
     protected Component getDefaultName() {
         return Component.translatable("container.more_iss.arcane_crafting_table");
@@ -257,7 +239,6 @@ public class ArcaneCraftingTableBlockEntity extends BaseContainerBlockEntity
         return new ArcaneCraftingMenu(windowId, inv, this);
     }
 
-    // ─── 内部クラス: RecipeWrapper ────────────────────────────────────────
     public static class RecipeWrapper implements Container {
         private final ArcaneCraftingTableBlockEntity be;
         public RecipeWrapper(ArcaneCraftingTableBlockEntity be) { this.be = be; }
