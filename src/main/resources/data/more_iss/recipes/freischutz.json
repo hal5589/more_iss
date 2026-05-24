@@ -3,7 +3,8 @@
   "ingredients": [
     {
       "item": "irons_spellbooks:scroll",
-      "nbt": "{ISB_spell:{data:{base_lvl:10,id:\"irons_spellbooks:magic_missile\"}}}"
+      "required_spell": "irons_spellbooks:blood_slash",
+      "required_level": 3
     },
     { "item": "irons_spellbooks:arcane_essence" },
     { "item": "irons_spellbooks:arcane_essence" },
@@ -14,7 +15,8 @@
     { "item": "irons_spellbooks:arcane_essence" },
     {
       "item": "irons_spellbooks:scroll",
-      "nbt": "{ISB_spell:{data:{base_lvl:10,id:\"irons_spellbooks:magic_arrow\"}}}"
+      "required_spell": "irons_spellbooks:sacrifice",
+      "required_level": 3
     }
   ],
   "catalyst": {
@@ -22,7 +24,7 @@
   },
   "catalyst_consume": true,
   "result_spell": {
-    "id": "more_iss:freischutz",
+    "id": "more_iss:sacrificial_edge",
     "level": 1
   }
 }

@@ -39,5 +39,6 @@
   "effect.more_iss.retribution": "報い",
   "block.more_iss.fusion_table": "融合作業台",
   "container.more_iss.arcane_crafting_table": "§d融合作業台",
-  "gui.more_iss.catalyst": "触媒"
+  "gui.more_iss.catalyst": "触媒",
+  "school.more_iss.synthesis": "融合"
 }

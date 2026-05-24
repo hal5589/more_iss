@@ -3,40 +3,16 @@ package nekotori_haru.more_iss;
 import com.mojang.logging.LogUtils;
 import io.redspace.ironsspellbooks.api.registry.SpellRegistry;
 import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
-import nekotori_haru.more_iss.block.ArcaneCraftingTableBlock;
-import nekotori_haru.more_iss.blockentity.ArcaneCraftingTableBlockEntity;
-import nekotori_haru.more_iss.client.ArcaneCraftingScreen;
-import nekotori_haru.more_iss.menu.ArcaneCraftingMenu;
-import nekotori_haru.more_iss.network.ModNetwork;
-import nekotori_haru.more_iss.recipe.ArcaneCraftingRecipe;
-import nekotori_haru.more_iss.recipe.ArcaneCraftingRecipeSerializer; // ⭕ 追加：分離したシリアライザーのインポート
-import nekotori_haru.more_iss.recipe.ArcaneCraftingRecipeType;
-import nekotori_haru.more_iss.registry.ModEffects;
-import nekotori_haru.more_iss.spell.ender.EnderShootingStar;
-import nekotori_haru.more_iss.spell.ender.FreischutzSpell;
-import nekotori_haru.more_iss.spell.blood.OverburstBloodSpell;
-import nekotori_haru.more_iss.spell.lightning.ThunderboltFlash;
-import nekotori_haru.more_iss.spell.holy.ProvidentialConduitSpell;
-import nekotori_haru.more_iss.spell.eldritch.SoulLinkSpell;
-import nekotori_haru.more_iss.spell.blood.SacrificialEdgeSpell;
-import nekotori_haru.more_iss.spell.ice.AbsoluteZeroSpell;
-import nekotori_haru.more_iss.spell.eldritch.DisintegrationSpell;
-import nekotori_haru.more_iss.util.DisintegrationState;
-import nekotori_haru.more_iss.util.DisintegrationTargetManager;
-import net.minecraft.client.gui.screens.MenuScreens;
+import io.redspace.ironsspellbooks.api.spells.SchoolType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
-import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.extensions.IForgeMenuType;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
@@ -44,58 +20,150 @@ import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.RegisterEvent;
 import net.minecraftforge.registries.RegistryObject;
+import nekotori_haru.more_iss.block.ArcaneCraftingTableBlock;
+import nekotori_haru.more_iss.blockentity.ArcaneCraftingTableBlockEntity;
+import nekotori_haru.more_iss.client.ArcaneCraftingScreen;
+import nekotori_haru.more_iss.menu.ArcaneCraftingMenu;
+import nekotori_haru.more_iss.network.ModNetwork;
+import nekotori_haru.more_iss.recipe.ArcaneCraftingRecipeSerializer;
+import nekotori_haru.more_iss.recipe.ArcaneCraftingRecipeType;
+import nekotori_haru.more_iss.registry.ModEffects;
+import nekotori_haru.more_iss.registry.SynthesisSchoolRegistry;
+import nekotori_haru.more_iss.spell.blood.OverburstBloodSpell;
+import nekotori_haru.more_iss.spell.blood.SacrificialEdgeSpell;
+import nekotori_haru.more_iss.spell.eldritch.DisintegrationSpell;
+import nekotori_haru.more_iss.spell.eldritch.SoulLinkSpell;
+import nekotori_haru.more_iss.spell.ender.EnderShootingStar;
+import nekotori_haru.more_iss.spell.ender.FreischutzSpell;
+import nekotori_haru.more_iss.spell.holy.ProvidentialConduitSpell;
+import nekotori_haru.more_iss.spell.ice.AbsoluteZeroSpell;
+import nekotori_haru.more_iss.spell.lightning.ThunderboltFlash;
+import nekotori_haru.more_iss.spell.synthesis.ConvergenceBeamSpell;
+import nekotori_haru.more_iss.spell.synthesis.ElementalBurstSpell;
+import nekotori_haru.more_iss.spell.synthesis.PrismaticShieldSpell;
+import nekotori_haru.more_iss.util.DisintegrationState;
+import nekotori_haru.more_iss.util.DisintegrationTargetManager;
+import net.minecraft.client.gui.screens.MenuScreens;
 import org.slf4j.Logger;
 
 @Mod(More_iss.MODID)
 public class More_iss {
 
     public static final String MODID = "more_iss";
-    private static final Logger LOGGER = LogUtils.getLogger();
+    public static final Logger LOGGER = LogUtils.getLogger();
 
-    // -------------------------------------------------------------------------
-    // レジストリ定義
-    // -------------------------------------------------------------------------
-    public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(ForgeRegistries.BLOCKS, MODID);
-    public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, MODID);
-    public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
-    public static final DeferredRegister<AbstractSpell> SPELLS = DeferredRegister.create(SpellRegistry.SPELL_REGISTRY_KEY, MODID);
-    public static final DeferredRegister<EntityType<?>> ENTITIES = DeferredRegister.create(ForgeRegistries.ENTITY_TYPES, MODID);
-    public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES = DeferredRegister.create(ForgeRegistries.BLOCK_ENTITY_TYPES, MODID);
-    public static final DeferredRegister<MenuType<?>> MENU_TYPES = DeferredRegister.create(ForgeRegistries.MENU_TYPES, MODID);
+    // ── DeferredRegister ─────────────────────────────────────────────────────
 
-    // -------------------------------------------------------------------------
-    // オブジェクト登録
-    // -------------------------------------------------------------------------
-    public static final RegistryObject<Block> EXAMPLE_BLOCK = BLOCKS.register("example_block", () -> new Block(BlockBehaviour.Properties.of().mapColor(MapColor.STONE)));
-    public static final RegistryObject<Item> EXAMPLE_BLOCK_ITEM = ITEMS.register("example_block", () -> new BlockItem(EXAMPLE_BLOCK.get(), new Item.Properties()));
-    public static final RegistryObject<Item> EXAMPLE_ITEM = ITEMS.register("example_item", () -> new Item(new Item.Properties().food(new FoodProperties.Builder().alwaysEat().nutrition(1).saturationMod(2f).build())));
+    public static final DeferredRegister<Block> BLOCKS =
+            DeferredRegister.create(ForgeRegistries.BLOCKS, MODID);
 
-    public static final RegistryObject<AbstractSpell> ENDER_SHOOTING_STAR = SPELLS.register("ender_shooting_star", EnderShootingStar::new);
-    public static final RegistryObject<AbstractSpell> FREISCHUTZ = SPELLS.register("freischutz", FreischutzSpell::new);
-    public static final RegistryObject<AbstractSpell> RAISEN = SPELLS.register("raisen", ThunderboltFlash::new);
-    public static final RegistryObject<AbstractSpell> OVERBURST_BLOOD = SPELLS.register("overburst_blood", OverburstBloodSpell::new);
-    public static final RegistryObject<AbstractSpell> PROVIDENTIAL_CONDUIT = SPELLS.register("providential_conduit", ProvidentialConduitSpell::new);
-    public static final RegistryObject<AbstractSpell> SACRIFICIAL_EDGE = SPELLS.register("sacrificial_edge", SacrificialEdgeSpell::new);
-    public static final RegistryObject<AbstractSpell> SOUL_LINK = SPELLS.register("soul_link", SoulLinkSpell::new);
-    public static final RegistryObject<AbstractSpell> ABSOLUTE_ZERO = SPELLS.register("absolute_zero", AbsoluteZeroSpell::new);
-    public static final RegistryObject<AbstractSpell> DISINTEGRATION = SPELLS.register("disintegration", DisintegrationSpell::new);
+    public static final DeferredRegister<Item> ITEMS =
+            DeferredRegister.create(ForgeRegistries.ITEMS, MODID);
 
-    // すべての登録キー名を "fusion_table" に統一
-    public static final RegistryObject<Block> ARCANE_CRAFTING_TABLE = BLOCKS.register("fusion_table", () -> new ArcaneCraftingTableBlock(BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.5f).requiresCorrectToolForDrops().noOcclusion()));
-    public static final RegistryObject<Item> ARCANE_CRAFTING_TABLE_ITEM = ITEMS.register("fusion_table", () -> new BlockItem(ARCANE_CRAFTING_TABLE.get(), new Item.Properties()));
-    public static final RegistryObject<BlockEntityType<ArcaneCraftingTableBlockEntity>> ARCANE_CRAFTING_TABLE_BE = BLOCK_ENTITIES.register("fusion_table", () -> BlockEntityType.Builder.of(ArcaneCraftingTableBlockEntity::new, ARCANE_CRAFTING_TABLE.get()).build(null));
-    public static final RegistryObject<MenuType<ArcaneCraftingMenu>> ARCANE_CRAFTING_MENU = MENU_TYPES.register("fusion_table", () -> IForgeMenuType.create(ArcaneCraftingMenu::new));
+    public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS =
+            DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
 
-    // -------------------------------------------------------------------------
-    // コンストラクタ
-    // -------------------------------------------------------------------------
+    public static final DeferredRegister<AbstractSpell> SPELLS =
+            DeferredRegister.create(SpellRegistry.SPELL_REGISTRY_KEY, MODID);
+
+    public static final DeferredRegister<net.minecraft.world.entity.EntityType<?>> ENTITIES =
+            DeferredRegister.create(ForgeRegistries.ENTITY_TYPES, MODID);
+
+    public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
+            DeferredRegister.create(ForgeRegistries.BLOCK_ENTITY_TYPES, MODID);
+
+    public static final DeferredRegister<MenuType<?>> MENU_TYPES =
+            DeferredRegister.create(ForgeRegistries.MENU_TYPES, MODID);
+
+    // ── ブロック / アイテム ───────────────────────────────────────────────────
+
+    public static final RegistryObject<Block> EXAMPLE_BLOCK =
+            BLOCKS.register("example_block", () ->
+                    new Block(net.minecraft.world.level.block.state.BlockBehaviour.Properties
+                            .of()
+                            .mapColor(MapColor.STONE)
+                            .strength(3.0f)
+                            .requiresCorrectToolForDrops()));
+
+    public static final RegistryObject<Item> EXAMPLE_BLOCK_ITEM =
+            ITEMS.register("example_block", () ->
+                    new BlockItem(EXAMPLE_BLOCK.get(), new Item.Properties()));
+
+    public static final RegistryObject<Item> EXAMPLE_ITEM =
+            ITEMS.register("example_item", () ->
+                    new Item(new Item.Properties()
+                            .food(new net.minecraft.world.food.FoodProperties.Builder()
+                                    .nutrition(1)
+                                    .saturationMod(2.0f)
+                                    .build())));
+
+    // ── 融合作業台 ────────────────────────────────────────────────────────────
+
+    public static final RegistryObject<Block> ARCANE_CRAFTING_TABLE =
+            BLOCKS.register("fusion_table", () ->
+                    new ArcaneCraftingTableBlock(
+                            net.minecraft.world.level.block.state.BlockBehaviour.Properties
+                                    .of()
+                                    .mapColor(MapColor.STONE)
+                                    .strength(3.0f)
+                                    .requiresCorrectToolForDrops()));
+
+    public static final RegistryObject<Item> ARCANE_CRAFTING_TABLE_ITEM =
+            ITEMS.register("fusion_table", () ->
+                    new BlockItem(ARCANE_CRAFTING_TABLE.get(), new Item.Properties()));
+
+    public static final RegistryObject<BlockEntityType<ArcaneCraftingTableBlockEntity>> ARCANE_CRAFTING_TABLE_BE =
+            BLOCK_ENTITIES.register("fusion_table", () ->
+                    BlockEntityType.Builder
+                            .of(ArcaneCraftingTableBlockEntity::new, ARCANE_CRAFTING_TABLE.get())
+                            .build(null));
+
+    public static final RegistryObject<MenuType<ArcaneCraftingMenu>> ARCANE_CRAFTING_MENU =
+            MENU_TYPES.register("fusion_table", () ->
+                    IForgeMenuType.create(ArcaneCraftingMenu::new));
+
+    // ── 既存スペル ────────────────────────────────────────────────────────────
+
+    public static final RegistryObject<AbstractSpell> ENDER_SHOOTING_STAR =
+            SPELLS.register("ender_shooting_star", EnderShootingStar::new);
+
+    public static final RegistryObject<AbstractSpell> FREISCHUTZ =
+            SPELLS.register("freischutz", FreischutzSpell::new);
+
+    public static final RegistryObject<AbstractSpell> RAISEN =
+            SPELLS.register("raisen", ThunderboltFlash::new);
+
+    public static final RegistryObject<AbstractSpell> OVERBURST_BLOOD =
+            SPELLS.register("overburst_blood", OverburstBloodSpell::new);
+
+    public static final RegistryObject<AbstractSpell> PROVIDENTIAL_CONDUIT =
+            SPELLS.register("providential_conduit", ProvidentialConduitSpell::new);
+
+    public static final RegistryObject<AbstractSpell> SACRIFICIAL_EDGE =
+            SPELLS.register("sacrificial_edge", SacrificialEdgeSpell::new);
+
+    public static final RegistryObject<AbstractSpell> SOUL_LINK =
+            SPELLS.register("soul_link", SoulLinkSpell::new);
+
+    public static final RegistryObject<AbstractSpell> ABSOLUTE_ZERO =
+            SPELLS.register("absolute_zero", AbsoluteZeroSpell::new);
+
+    public static final RegistryObject<AbstractSpell> DISINTEGRATION =
+            SPELLS.register("disintegration", DisintegrationSpell::new);
+
+    // ── コンストラクタ ────────────────────────────────────────────────────────
+
     public More_iss() {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
 
+        // エフェクト登録
         ModEffects.register(modEventBus);
 
+        // 融合スクール登録（スペルより先に登録する）
+        SynthesisSchoolRegistry.SCHOOLS.register(modEventBus);
+
+        // 各レジストリを登録
         BLOCKS.register(modEventBus);
         ITEMS.register(modEventBus);
         CREATIVE_MODE_TABS.register(modEventBus);
@@ -104,26 +172,32 @@ public class More_iss {
         BLOCK_ENTITIES.register(modEventBus);
         MENU_TYPES.register(modEventBus);
 
+        // レシピ登録
         modEventBus.addListener(this::registerRecipes);
 
-        ModNetwork.register();
+        // クライアントセットアップ
         modEventBus.addListener(this::clientSetup);
 
+        // 解体魔法の状態管理初期化
         DisintegrationState.init();
         DisintegrationTargetManager.init();
     }
 
-    private void registerRecipes(RegisterEvent event) {
-        if (event.getRegistryKey().equals(ForgeRegistries.Keys.RECIPE_TYPES)) {
-            event.register(ForgeRegistries.Keys.RECIPE_TYPES,
-                    new ResourceLocation(MODID, ArcaneCraftingRecipe.ID),
-                    () -> ArcaneCraftingRecipeType.INSTANCE);
+    private void registerRecipes(net.minecraftforge.registries.RegisterEvent event) {
+        if (event.getRegistryKey().equals(net.minecraft.core.registries.Registries.RECIPE_TYPE)) {
+            event.register(
+                    net.minecraft.core.registries.Registries.RECIPE_TYPE,
+                    new ResourceLocation(MODID, "arcane_crafting"),
+                    () -> ArcaneCraftingRecipeType.INSTANCE
+            );
             LOGGER.info("[More_iss] ArcaneCrafting RecipeType registered successfully via RegisterEvent.");
         }
-        if (event.getRegistryKey().equals(ForgeRegistries.Keys.RECIPE_SERIALIZERS)) {
-            event.register(ForgeRegistries.Keys.RECIPE_SERIALIZERS,
-                    new ResourceLocation(MODID, ArcaneCraftingRecipe.ID),
-                    () -> ArcaneCraftingRecipeSerializer.INSTANCE); // ⭕ インナークラスから独立した外部クラスのINSTANCEへ修正
+        if (event.getRegistryKey().equals(net.minecraft.core.registries.Registries.RECIPE_SERIALIZER)) {
+            event.register(
+                    net.minecraft.core.registries.Registries.RECIPE_SERIALIZER,
+                    new ResourceLocation(MODID, "arcane_crafting"),
+                    () -> ArcaneCraftingRecipeSerializer.INSTANCE
+            );
             LOGGER.info("[More_iss] ArcaneCrafting RecipeSerializer registered successfully via RegisterEvent.");
         }
     }
@@ -132,5 +206,6 @@ public class More_iss {
         event.enqueueWork(() ->
                 MenuScreens.register(ARCANE_CRAFTING_MENU.get(), ArcaneCraftingScreen::new)
         );
+        ModNetwork.clientSetup(event);
     }
 }
