@@ -8,10 +8,10 @@ import nekotori_haru.more_iss.network.PacketCraftComplete;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -99,17 +99,13 @@ public class ArcaneCraftingScreen extends AbstractContainerScreen<ArcaneCrafting
                 }
             }
 
-            if (this.highlightSlot != -1 && this.highlightSlot != this.lastSoundedSlot && this.minecraft != null && this.minecraft.level != null) {
+            if (this.highlightSlot != -1 && this.highlightSlot != this.lastSoundedSlot && this.minecraft != null) {
                 this.lastSoundedSlot = this.highlightSlot;
                 float pitch = 0.6f + (this.highlightSlot * 0.08f);
 
-                this.minecraft.level.playSound(
-                        this.minecraft.player,
-                        this.minecraft.player.getX(), this.minecraft.player.getY(), this.minecraft.player.getZ(),
-                        SoundEvents.AMETHYST_BLOCK_STEP,
-                        SoundSource.PLAYERS,
-                        0.5f,
-                        pitch
+                // ⭕ 修正1: クライアント安全なUIサウンド再生に差し替え
+                this.minecraft.getSoundManager().play(
+                        SimpleSoundInstance.forUI(SoundEvents.AMETHYST_BLOCK_STEP, pitch, 0.5f)
                 );
             }
         }
@@ -215,17 +211,13 @@ public class ArcaneCraftingScreen extends AbstractContainerScreen<ArcaneCrafting
                         this.ringScale = 1.4f;
                         this.ringVelocity = 0.1f;
 
-                        if (this.minecraft != null && this.minecraft.level != null) {
+                        if (this.minecraft != null) {
                             float fillPitch = 0.8f + (this.landedCount * 0.08f);
                             this.landedCount++;
 
-                            this.minecraft.level.playSound(
-                                    this.minecraft.player,
-                                    this.minecraft.player.getX(), this.minecraft.player.getY(), this.minecraft.player.getZ(),
-                                    SoundEvents.END_PORTAL_FRAME_FILL,
-                                    SoundSource.PLAYERS,
-                                    0.8f,
-                                    fillPitch
+                            // ⭕ 修正2: クライアント安全なUIサウンド再生に差し替え
+                            this.minecraft.getSoundManager().play(
+                                    SimpleSoundInstance.forUI(SoundEvents.END_PORTAL_FRAME_FILL, fillPitch, 0.8f)
                             );
                         }
 
@@ -242,14 +234,10 @@ public class ArcaneCraftingScreen extends AbstractContainerScreen<ArcaneCrafting
             if (totalSlotsAtCenter == 8 && packetDelayTimer == -1 && !hasSentCompletionPacket) {
                 packetDelayTimer = 3; // 3ティック（約0.15秒）のウェイトを設定
 
-                if (this.minecraft != null && this.minecraft.level != null) {
-                    this.minecraft.level.playSound(
-                            this.minecraft.player,
-                            this.minecraft.player.getX(), this.minecraft.player.getY(), this.minecraft.player.getZ(),
-                            SoundEvents.ENCHANTMENT_TABLE_USE,
-                            SoundSource.PLAYERS,
-                            1.0f,
-                            1.0f
+                if (this.minecraft != null) {
+                    // ⭕ 修正3: クライアント安全なUIサウンド再生に差し替え
+                    this.minecraft.getSoundManager().play(
+                            SimpleSoundInstance.forUI(SoundEvents.ENCHANTMENT_TABLE_USE, 1.0f, 1.0f)
                     );
                 }
 

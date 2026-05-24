@@ -3,7 +3,6 @@ package nekotori_haru.more_iss.util;
 import io.redspace.ironsspellbooks.api.registry.SchoolRegistry;
 import io.redspace.ironsspellbooks.api.spells.SchoolType;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.ai.attributes.Attribute;
 
 /**
  * 融合魔法専用のスペルパワー倍率計算。
@@ -42,14 +41,14 @@ public final class SynthesisPowerUtil {
         int count = 0;
 
         for (SchoolType school : schoolRegistry) {
-            Attribute attr = school.spellPowerAttribute();
-            if (attr == null) continue;
-            var instance = caster.getAttribute(attr);
-            if (instance == null) continue;
+            // getPowerFor() を使用してスペルパワーを取得
+            double basePower = 1.0; // デフォルト値
+            double actualPower = school.getPowerFor(caster);
 
-            // ベース値を除いた装備・スキル等による追加分
-            totalBonus += instance.getValue() - instance.getBaseValue();
-            count++;
+            if (actualPower > basePower) {
+                totalBonus += actualPower - basePower;
+                count++;
+            }
         }
 
         if (count == 0) return 1.0f;

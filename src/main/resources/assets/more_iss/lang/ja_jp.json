@@ -40,5 +40,8 @@
   "block.more_iss.fusion_table": "融合作業台",
   "container.more_iss.arcane_crafting_table": "§d融合作業台",
   "gui.more_iss.catalyst": "触媒",
-  "school.more_iss.synthesis": "融合"
+  "school.more_iss.synthesis": "融合",
+  "spell.more_iss.heavenly_blast": "神の矛",
+  "ui.more_iss.heavenly_blast.beams": "発射本数: %s本",
+  "ui.more_iss.heavenly_blast.radius": "攻撃範囲: 半径%sブロック"
 }

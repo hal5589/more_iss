@@ -1,8 +1,7 @@
-package nekotori_haru.more_iss.spell.eldritch;
+package nekotori_haru.more_iss.spell.synthesis;
 
 import io.redspace.ironsspellbooks.api.config.DefaultConfig;
 import io.redspace.ironsspellbooks.api.magic.MagicData;
-import io.redspace.ironsspellbooks.api.registry.SchoolRegistry;
 import io.redspace.ironsspellbooks.api.spells.*;
 import io.redspace.ironsspellbooks.api.util.Utils;
 import io.redspace.ironsspellbooks.capabilities.magic.TargetEntityCastData;
@@ -17,6 +16,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import nekotori_haru.more_iss.More_iss;
 import nekotori_haru.more_iss.util.DisintegrationState;
+import nekotori_haru.more_iss.registry.SynthesisSchoolRegistry;
 
 public class DisintegrationSpell extends AbstractSpell {
     private final ResourceLocation spellId = new ResourceLocation(More_iss.MODID, "disintegration");
@@ -26,7 +26,7 @@ public class DisintegrationSpell extends AbstractSpell {
 
     private final DefaultConfig defaultConfig = new DefaultConfig()
             .setMinRarity(SpellRarity.LEGENDARY)
-            .setSchoolResource(SchoolRegistry.ELDRITCH_RESOURCE)
+            .setSchoolResource(SynthesisSchoolRegistry.SYNTHESIS_RESOURCE)
             .setMaxLevel(1)
             .setCooldownSeconds(60)
             .build();
