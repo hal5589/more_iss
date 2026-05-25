@@ -1,47 +1,82 @@
 {
+  "spell.more_iss.flame_ray": "フレイムレイ",
+  "spell.more_iss.flame_ray.guide": "前方に激しい炎の光線を放ち、命中した対象を数秒間激しく炎上させる。",
+
+  "spell.more_iss.solar_ray": "ソーラーレイ",
+  "spell.more_iss.solar_ray.guide": "太陽の光を圧縮した光線を放つ。命中した対象の防具を徐々に溶かし、防御値と防具強度を減少させる。連続で当てると効果が上昇する",
+
+  "spell.more_iss.holy_ray": "ホーリーレイ",
+  "spell.more_iss.holy_ray.guide": "聖なる光線を放つ。アンデッド属性のモブに対して特効ダメージを与える。",
+
+  "spell.more_iss.void_ray": "ヴォイドレイ",
+  "spell.more_iss.void_ray.guide": "虚空の力を集束させた濃い紫色のレーザーを放つ。他の光線魔法を圧倒する射程を誇る。",
+
+  "spell.more_iss.spectal_ray": "スペクタルレイ",
+  "spell.more_iss.spectal_ray.guide": "半透明の薄水色の幻影光線を放つ。命中した対象に20秒間の「導き」を付与する。",
+
   "spell.more_iss.ender_shooting_star": "魔法の流星",
-  "item.irons_spellbooks.scroll.more_iss.ender_shooting_star": "スクロール: 魔法の流星",
-  "spell.more_iss.raisen": "六重雷槍",
-  "item.irons_spellbooks.scroll.more_iss.raisen": "スクロール: 六重雷槍",
-  "spell.more_iss.overburst_blood": "オーバーバースト",
-  "effect.more_iss.overburst": "オーバーバースト",
-  "ui.more_iss.damage_multiplier": "近接ダメージ上昇: %s%%",
-  "ui.more_iss.penetration_ratio": "耐性貫通割合: %s%%",
-  "container.more_iss.arcane_anvil_crafting": "魔法合成",
-  "spell.more_iss.overburst_blood.guide": "帯電の魔力と心臓停止の代償を掛け合わせ、血の暴発を引き起こす未知のスクロール。\n攻撃力を瞬間的に上昇させ、あらゆる防御も貫く攻撃を可能にする。",
   "spell.more_iss.ender_shooting_star.guide": "大量のマジックミサイルを流星のごとく発射する。",
+  "item.irons_spellbooks.scroll.more_iss.ender_shooting_star": "スクロール: 魔法の流星",
+
+  "spell.more_iss.raisen": "六重雷槍",
   "spell.more_iss.raisen.guide": "六本の雷の槍で対象のモブを貫く。",
-  "spell.more_iss.providential_conduit": "天の導き",
-  "spell.more_iss.providential_conduit.guide": "自身が持つすべての有益なバフ効果を対象に転写します。持続時間はスペルレベルと魔法威力に応じて増加します。",
-  "ui.more_iss.providential_conduit.duration": "基本持続時間: %1$ss",
-  "spell.more_iss.sacrificial_edge": "自傷の刃",
-  "spell.more_iss.sacrificial_edge.guide": "詠唱すると自身に持続的な自傷デバフを付与します。デバフ中もう一度詠唱すると、それまで自身が受けた総ダメージに比例した強力な血の斬撃を前方に放ちます。",
-  "ui.more_iss.sacrificial_edge.info": "ダメージ倍率: %1$sx",
-  "death.attack.sacrificial_purge": "%1$sの血液は膨大な魔力に耐え切れず破裂した",
-  "effect.more_iss.sacrificial_bleed": "自傷",
-  "effect.more_iss.sacrificial_marker": "血液の凝固",
-  "spell.more_iss.soul_link": "ソウルリンク",
-  "ui.more_iss.soul_link.duration": "効果時間: %s秒",
-  "ui.more_iss.soul_link.no_target": "有効な対象がいません",
-  "effect.more_iss.soul_protection": "魂の保護",
+  "item.irons_spellbooks.scroll.more_iss.raisen": "スクロール: 六重雷槍",
+
   "spell.more_iss.absolute_zero": "アブソリュート・ゼロ",
   "spell.more_iss.absolute_zero.guide": "周囲に絶対零度の波動を放ち、敵にダメージと強力な移動速度低下デバフを付与する。同時に、周囲に敵の目を引きつける氷の影を同心円状に多数召喚する。氷の影は消滅時に砕け散り、周囲に氷柱を放つ。",
-  "ui.more_iss.absolute_zero.ice_count": "氷の影の数: %s",
+
+  "spell.more_iss.providential_conduit": "天の導き",
+  "spell.more_iss.providential_conduit.guide": "自身が持つすべての有益なバフ効果を対象に転写します。持続時間はスペルレベルと魔法威力に応じて増加します。",
+
+  "spell.more_iss.sacrificial_edge": "自傷の刃",
+  "spell.more_iss.sacrificial_edge.guide": "詠唱すると自身に持続的な自傷デバフを付与します。デバフ中もう一度詠唱すると、それまで自身が受けた総ダメージに比例した強力な血の斬撃を前方に放ちます。",
+
+  "spell.more_iss.overburst_blood": "オーバーバースト",
+  "spell.more_iss.overburst_blood.guide": "帯電の魔力と心臓停止の代償を掛け合わせ、血の暴発を引き起こす未知のスクロール。\n攻撃力を瞬間的に上昇させ、あらゆる防御も貫く攻撃を可能にする。",
 
   "spell.more_iss.freischutz": "魔弾の射手",
   "spell.more_iss.freischutz.guide": "悪魔と契約を交わし、必中の魔弾を7発装填する。契約期間中にすべての魔弾を撃ち尽くすと、「報い」が下る。",
+
+  "spell.more_iss.soul_link": "ソウルリンク",
+  "spell.more_iss.soul_link.guide": "対象と自身の魂を繋ぐ未知の魔術。",
+
+  "spell.more_iss.heavenly_blast": "神の矛",
+  "spell.more_iss.heavenly_blast.guide": "天空より神聖なる光の矛を複数落とし、広範囲の敵を焼き払う。",
+
+
+  "mobEffect.more_iss.melting": "溶解",
+  "effect.more_iss.overburst": "オーバーバースト",
+  "effect.more_iss.sacrificial_bleed": "自傷",
+  "effect.more_iss.sacrificial_marker": "血液の凝固",
+  "effect.more_iss.soul_protection": "魂の保護",
+  "effect.more_iss.demonic_covenant": "悪魔の契約",
+  "effect.more_iss.retribution": "報い",
+
+
+  "block.more_iss.fusion_table": "融合作業台",
+  "container.more_iss.arcane_crafting_table": "§d融合作業台",
+  "container.more_iss.arcane_anvil_crafting": "魔法合成",
+  "school.more_iss.synthesis": "融合",
+  "gui.more_iss.catalyst": "触媒",
+
+
+  "ui.more_iss.damage_multiplier": "近接ダメージ上昇: %s%%",
+  "ui.more_iss.penetration_ratio": "耐性貫通割合: %s%%",
+  "ui.more_iss.providential_conduit.duration": "基本持続時間: %1$ss",
+  "ui.more_iss.sacrificial_edge.info": "ダメージ倍率: %1$sx",
+  "ui.more_iss.absolute_zero.ice_count": "氷の影の数: %s",
+  "ui.more_iss.soul_link.duration": "効果時間: %s秒",
+  "ui.more_iss.soul_link.no_target": "有効な対象がいません",
+  "ui.more_iss.heavenly_blast.beams": "発射本数: %s本",
+  "ui.more_iss.heavenly_blast.radius": "攻撃範囲: 半径%sブロック",
+  "ui.more_iss.conversion_rate": "変換率: %s%%",
+
   "ui.more_iss.freischutz.contract_duration": "契約期間: %s秒",
   "ui.more_iss.freischutz.penalty_trigger": "悪魔への報いを受けている間は、新たに契約を結ぶことはできない。",
   "ui.more_iss.freischutz.exhausted_penalty": "魔弾を撃ち尽くした。悪魔からの報いが下る。",
   "ui.more_iss.freischutz.bypass_penalty": "§c契約の踏み倒しは許されない。悪魔の絶対的な執行が下った。",
   "ui.more_iss.freischutz.illegal_remove_penalty": "§c「報い」の拒絶、あるいは解除は許されない。悪魔の絶対的な執行が下った。",
-  "effect.more_iss.demonic_covenant": "悪魔の契約",
-  "effect.more_iss.retribution": "報い",
-  "block.more_iss.fusion_table": "融合作業台",
-  "container.more_iss.arcane_crafting_table": "§d融合作業台",
-  "gui.more_iss.catalyst": "触媒",
-  "school.more_iss.synthesis": "融合",
-  "spell.more_iss.heavenly_blast": "神の矛",
-  "ui.more_iss.heavenly_blast.beams": "発射本数: %s本",
-  "ui.more_iss.heavenly_blast.radius": "攻撃範囲: 半径%sブロック"
+
+
+  "death.attack.sacrificial_purge": "%1$sの血液は膨大な魔力に耐え切れず破裂した"
 }

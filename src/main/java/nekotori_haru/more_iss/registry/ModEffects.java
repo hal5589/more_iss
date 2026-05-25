@@ -1,12 +1,7 @@
 package nekotori_haru.more_iss.registry;
 
 import nekotori_haru.more_iss.More_iss;
-import nekotori_haru.more_iss.effect.OverburstEffect;
-import nekotori_haru.more_iss.effect.SacrificialBleedEffect;
-import nekotori_haru.more_iss.effect.SacrificialMarkerEffect;
-import nekotori_haru.more_iss.effect.SoulLinkEffect;
-import nekotori_haru.more_iss.effect.DemonicCovenantEffect;
-import nekotori_haru.more_iss.effect.RetributionEffect;
+import nekotori_haru.more_iss.effect.*;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;
@@ -37,8 +32,14 @@ public class ModEffects {
     public static final RegistryObject<MobEffect> DEMONIC_COVENANT =
             MOB_EFFECTS.register("demonic_covenant", DemonicCovenantEffect::new);
 
+    public static final RegistryObject<MobEffect> FROST_ARMOR =
+            MOB_EFFECTS.register("frost_armor", FrostArmorEffect::new);
+
     public static final RegistryObject<MobEffect> RETRIBUTION =
             MOB_EFFECTS.register("retribution", RetributionEffect::new);
+
+    public static final RegistryObject<MobEffect> MELTING =
+            MOB_EFFECTS.register("melting", MeltingEffect::new);
 
     public static void register(IEventBus eventBus) {
         MOB_EFFECTS.register(eventBus);
