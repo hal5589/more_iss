@@ -9,7 +9,7 @@ import io.redspace.ironsspellbooks.api.util.Utils;
 import io.redspace.ironsspellbooks.capabilities.magic.TargetEntityCastData;
 import io.redspace.ironsspellbooks.entity.spells.target_area.TargetedAreaEntity;
 import io.redspace.ironsspellbooks.registries.SoundRegistry;
-import nekotori_haru.more_iss.entity.UnfadingAoe; // 👈 上で配置したエンティティへのインポートパスを修正
+import nekotori_haru.more_iss.entity.UnfadingAoe;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
@@ -36,7 +36,7 @@ public class UnfadingSpell extends AbstractSpell {
 
     private final DefaultConfig defaultConfig = new DefaultConfig()
             .setMinRarity(SpellRarity.COMMON)
-            .setSchoolResource(SchoolRegistry.NATURE_RESOURCE) // 🌲 自然属性（NATURE）のSchoolに配置
+            .setSchoolResource(SchoolRegistry.NATURE_RESOURCE)
             .setMaxLevel(5)
             .setCooldownSeconds(20)
             .build();
@@ -91,17 +91,17 @@ public class UnfadingSpell extends AbstractSpell {
         int duration = getDuration(spellLevel, entity);
         float radius = getRadius(spellLevel, entity);
 
-        // 🌟 正しいインポートパスからUnfadingAoeを召喚
         UnfadingAoe aoeEntity = new UnfadingAoe(world);
         aoeEntity.setOwner(entity);
         aoeEntity.setCircular();
         aoeEntity.setRadius(radius);
         aoeEntity.setDuration(duration);
+
+        // 🌟 属性威力が最初から計算に組み込まれている getSpellPower をベースにします
         aoeEntity.setDamage(getSpellPower(spellLevel, entity));
         aoeEntity.setPos(spawn);
         world.addFreshEntity(aoeEntity);
 
-        // 自然属性に映えるライムグリーンのインジケーター（0x32CD32）
         TargetedAreaEntity visualEntity = TargetedAreaEntity.createTargetAreaEntity(world, spawn, radius, 0x32CD32);
         visualEntity.setDuration(duration);
         visualEntity.setOwner(aoeEntity);
@@ -110,12 +110,18 @@ public class UnfadingSpell extends AbstractSpell {
         super.onCast(world, spellLevel, entity, castSource, playerMagicData);
     }
 
+    // 🌟 修正：属性威力がすでに自動適用されている getSpellPower を安全に使用
     private float getRadius(int spellLevel, LivingEntity caster) {
-        return 4.0f + (spellLevel * 0.5f);
+        float powerModifier = getSpellPower(spellLevel, caster);
+        // 基礎半径4.0 ＋ 属性・魔法威力補正 × 1.5（装備で自然威力を盛るほど広がる）
+        return 4.0f + (powerModifier * 1.5f);
     }
 
+    // 🌟 修正：持続時間にも同じく getSpellPower の属性威力の恩恵を安全に適用
     private int getDuration(int spellLevel, LivingEntity caster) {
-        return 200; // 10秒間持続
+        float powerModifier = getSpellPower(spellLevel, caster);
+        // 基礎10秒（200 Ticks） ＋ 属性・魔法威力補正 × 40 Ticks（補正1ごとに2秒ずつ追加）
+        return 200 + (int)(powerModifier * 40);
     }
 
     @Override
@@ -125,6 +131,6 @@ public class UnfadingSpell extends AbstractSpell {
 
     @Override
     public Vector3f getTargetingColor() {
-        return new Vector3f(0.2f, 0.8f, 0.2f); // ターゲット線の色（黄緑）
+        return new Vector3f(0.2f, 0.8f, 0.2f);
     }
 }

@@ -42,18 +42,11 @@ public class FrostArmorSpell extends AbstractSpell {
 
     @Override
     public List<MutableComponent> getUniqueInfo(int spellLevel, LivingEntity caster) {
-        // 🌟 新仕様：100%スタートでレベルごとに+10%の固定値
         float conversionRatePercent = 100.0f + (spellLevel - 1) * 10.0f;
-
-        // 持続時間の計算（魔法威力依存のロマン仕様）
         int durationTicks = getDurationWithPower(spellLevel, caster);
 
         return List.of(
-                // 1. 持続時間の表示（本家と同じく timeFromTicks を使用し、小数点以下1桁に丸める）
                 Component.translatable("ui.irons_spellbooks.duration", Utils.timeFromTicks(durationTicks, 1)),
-
-                // 2. 変換率の表示
-                // 🌟 本家の手法（stringTruncation）を取り入れつつ、言語ファイル不要で絶対にバグらないように literal で結合
                 Component.literal("変換率: " + Utils.stringTruncation(conversionRatePercent, 1) + "%")
         );
     }
@@ -66,23 +59,19 @@ public class FrostArmorSpell extends AbstractSpell {
     @Override
     public void onCast(Level level, int spellLevel, LivingEntity entity, CastSource castSource, MagicData playerMagicData) {
         if (!level.isClientSide) {
-            // エフェクトのレベル（amplifier）には、スペルレベル（0スタート）を引き渡す
-            int effectAmplifier = spellLevel - 1;
-
-            // 魔法威力が反映された動的な持続時間を取得
+            // 🌟 識別バグ対策：レベルを100倍（レベル5なら500）にして、通常のバフ計算から隔離する
+            int secureAmplifier = spellLevel * 100;
             int duration = getDurationWithPower(spellLevel, entity);
 
-            // プレイヤーに氷の鎧バフを付与
-            entity.addEffect(new MobEffectInstance(ModEffects.FROST_ARMOR.get(), duration, effectAmplifier, false, false, true));
+            entity.addEffect(new MobEffectInstance(ModEffects.FROST_ARMOR.get(), duration, secureAmplifier, false, false, true));
         }
         super.onCast(level, spellLevel, entity, castSource, playerMagicData);
     }
 
-    // 持続時間の計算式（ベース20秒 + レベル毎5秒 + 魔法威力×10 ticks [0.5秒]）
     public static int getDurationWithPower(int spellLevel, LivingEntity caster) {
         float power = new FrostArmorSpell().getSpellPower(spellLevel, caster);
-        int baseDuration = 400 + (spellLevel - 1) * 100; // レベルによる基礎秒数
-        int powerBonus = (int)(power * 10); // 魔法威力ボーナス
+        int baseDuration = 400 + (spellLevel - 1) * 100;
+        int powerBonus = (int)(power * 10);
         return baseDuration + powerBonus;
     }
 }

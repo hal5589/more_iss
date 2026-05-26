@@ -4,10 +4,10 @@ import com.mojang.logging.LogUtils;
 import io.redspace.ironsspellbooks.api.registry.SpellRegistry;
 import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
 import nekotori_haru.more_iss.spell.fire.FlameRaySpell;
-import nekotori_haru.more_iss.spell.nature.SolarRaySpell;       // 🌿 追加
-import nekotori_haru.more_iss.spell.holy.HolyRaySpell;           // ✨ 追加
-import nekotori_haru.more_iss.spell.ender.VoidRaySpell;          // 🌀 追加
-import nekotori_haru.more_iss.spell.evocation.SpectalRaySpell;  // 👥 追加
+import nekotori_haru.more_iss.spell.nature.SolarRaySpell;
+import nekotori_haru.more_iss.spell.holy.HolyRaySpell;
+import nekotori_haru.more_iss.spell.ender.VoidRaySpell;
+import nekotori_haru.more_iss.spell.evocation.SpectalRaySpell;
 import nekotori_haru.more_iss.spell.ender.FreischutzSpell;
 import nekotori_haru.more_iss.spell.holy.HeavenlyBlastSpell;
 import nekotori_haru.more_iss.spell.nature.UnfadingSpell;
@@ -100,7 +100,7 @@ public class More_iss {
     public static final RegistryObject<AbstractSpell> UNFADING = SPELLS.register("unfading", UnfadingSpell::new);
     public static final RegistryObject<AbstractSpell> FROST_ARMOR = SPELLS.register("frost_armor", FrostArmorSpell::new);
 
-    // 🌟 5つの属性ビーム魔法をすべて登録
+    // 5つの属性ビーム魔法をすべて登録
     public static final RegistryObject<AbstractSpell> FLAME_RAY = SPELLS.register("flame_ray", FlameRaySpell::new);
     public static final RegistryObject<AbstractSpell> SOLAR_RAY = SPELLS.register("solar_ray", SolarRaySpell::new);
     public static final RegistryObject<AbstractSpell> HOLY_RAY = SPELLS.register("holy_ray", HolyRaySpell::new);
@@ -131,6 +131,9 @@ public class More_iss {
 
         DisintegrationState.init();
         DisintegrationTargetManager.init();
+
+        // 🌟 正しい位置：コンストラクタの処理の一番最後にインスタンス登録を引っ越しさせました
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new nekotori_haru.more_iss.event.FrostArmorDamageEventHandler());
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
