@@ -3,7 +3,8 @@
   "ingredients": [
     {
       "item": "irons_spellbooks:scroll",
-      "nbt": "{ISB_spell:{data:{base_lvl:3,id:\"irons_spellbooks:blood_slash\"}}}"
+      "required_spell": "irons_spellbooks:blood_slash",
+      "required_level": 4
     },
     { "item": "irons_spellbooks:arcane_essence" },
     { "item": "irons_spellbooks:arcane_essence" },
@@ -14,7 +15,8 @@
     { "item": "irons_spellbooks:arcane_essence" },
     {
       "item": "irons_spellbooks:scroll",
-      "nbt": "{ISB_spell:{data:{base_lvl:3,id:\"irons_spellbooks:sacrifice\"}}}"
+      "required_spell": "irons_spellbooks:sacrifice",
+      "required_level": 4
     }
   ],
   "catalyst": {
