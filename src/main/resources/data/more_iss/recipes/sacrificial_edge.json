@@ -4,7 +4,7 @@
     {
       "item": "irons_spellbooks:scroll",
       "required_spell": "irons_spellbooks:blood_slash",
-      "required_level": 4
+      "required_level": 3
     },
     { "item": "irons_spellbooks:arcane_essence" },
     { "item": "irons_spellbooks:arcane_essence" },
@@ -16,7 +16,7 @@
     {
       "item": "irons_spellbooks:scroll",
       "required_spell": "irons_spellbooks:sacrifice",
-      "required_level": 4
+      "required_level": 3
     }
   ],
   "catalyst": {
