@@ -29,13 +29,14 @@ public class DisintegrationSpell extends AbstractSpell {
             .setSchoolResource(SynthesisSchoolRegistry.SYNTHESIS_RESOURCE)
             .setMaxLevel(1)
             .setCooldownSeconds(60)
+            .setAllowCrafting(false)
             .build();
 
     // 詠唱開始時の多重実行を防ぐための内部フラグ
     private boolean hasStartedCasting = false;
 
     public DisintegrationSpell() {
-        this.baseManaCost = 1500;
+        this.baseManaCost = Integer.MAX_VALUE;
         this.manaCostPerLevel = 0;
         this.baseSpellPower = 5;
         this.spellPowerPerLevel = 0;

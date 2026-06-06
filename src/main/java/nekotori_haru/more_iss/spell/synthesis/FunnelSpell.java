@@ -47,8 +47,8 @@ public class FunnelSpell extends AbstractSpell {
     public FunnelSpell() {
         this.manaCostPerLevel = 25;
         this.baseSpellPower = 12;
-        this.spellPowerPerLevel = 3;
-        this.baseManaCost = 100;
+        this.spellPowerPerLevel = 5;
+        this.baseManaCost = 30;
     }
 
     @Override
@@ -61,6 +61,7 @@ public class FunnelSpell extends AbstractSpell {
                 .setSchoolResource(SynthesisSchoolRegistry.SYNTHESIS_RESOURCE)
                 .setMaxLevel(5)
                 .setCooldownSeconds(24)
+                .setAllowCrafting(false)
                 .build();
     }
 

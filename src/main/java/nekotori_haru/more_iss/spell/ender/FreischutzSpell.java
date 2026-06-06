@@ -44,8 +44,8 @@ public class FreischutzSpell extends AbstractSpell {
 
     public FreischutzSpell() {
         this.manaCostPerLevel = 40;
-        this.baseSpellPower = 30;
-        this.spellPowerPerLevel = 10;
+        this.baseSpellPower = 15;
+        this.spellPowerPerLevel = 7;
         this.castTime = 0;
         this.baseManaCost = 150;
     }

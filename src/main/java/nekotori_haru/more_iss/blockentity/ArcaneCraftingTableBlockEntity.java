@@ -69,7 +69,6 @@ public class ArcaneCraftingTableBlockEntity extends BaseContainerBlockEntity imp
         this.isCraftingActive = active;
     }
 
-    // ⭕ 【ロジック修正】サーバー側はクラフトの「開始」と「維持」だけを管理する
     public static void serverTick(Level level, BlockPos pos, BlockState state, ArcaneCraftingTableBlockEntity be) {
         if (level.isClientSide) return;
 
@@ -79,22 +78,15 @@ public class ArcaneCraftingTableBlockEntity extends BaseContainerBlockEntity imp
         if (recipeOpt.isPresent()) {
             if (!be.isCraftingActive) {
                 be.isCraftingActive = true;
-                be.craftingTick = 40; // クラフト開始フラグ
+                be.craftingTick = 40;
                 be.setChanged();
                 sendAnimPacket(level, pos, be, true);
             }
-
-            // ⭕ 自動でカウントダウンして finishCrafting() を呼ぶ処理を削除。
-            // 演出中のクラフト有効状態（isCraftingActive = true）を維持し続けます。
         } else {
-            // レシピが崩されたら中断
             be.stopCrafting(level, pos);
         }
     }
 
-    // ⭕ 【パケット受信時に呼ぶためのパブリックメソッド】
-    // Screen側から「爆発したよ！」というパケット（sendCraftCompletionToServer）が届いた時、
-    // サーバー側のネットワークハンドラ等からこのメソッドを呼び出すようにしてください。
     public void executeCraftCompletion() {
         if (this.level == null || this.level.isClientSide) return;
 
@@ -113,7 +105,6 @@ public class ArcaneCraftingTableBlockEntity extends BaseContainerBlockEntity imp
 
         ItemStack result = recipe.getResultItem(level.registryAccess()).copy();
 
-        // 材料の消費（周囲8スロット）
         for (int i = 0; i < 8; i++) {
             ItemStack stack = itemHandler.getStackInSlot(i);
             if (!stack.isEmpty()) {
@@ -122,17 +113,14 @@ public class ArcaneCraftingTableBlockEntity extends BaseContainerBlockEntity imp
             }
         }
 
-        // 中央スロットの消費
         if (recipe.getIngredients().size() > 8 && !recipe.getIngredients().get(8).isEmpty()) {
             itemHandler.extractItem(8, 1, false);
         }
 
-        // 触媒の消費
         if (recipe.isCatalystConsumed()) {
             itemHandler.extractItem(9, 1, false);
         }
 
-        // 成果物を中央（スロット8）にセット
         itemHandler.setStackInSlot(8, result);
 
         isCraftingActive = false;

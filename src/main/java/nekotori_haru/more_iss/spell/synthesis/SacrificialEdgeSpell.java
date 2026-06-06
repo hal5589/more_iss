@@ -35,8 +35,10 @@ public class SacrificialEdgeSpell extends AbstractSpell {
     private final double perLevel = 0.5;
 
     public SacrificialEdgeSpell() {
-        this.baseSpellPower = 0;
+        this.baseSpellPower = 2;
         this.spellPowerPerLevel = 0;
+        this.baseManaCost = 100;
+        this.manaCostPerLevel = 30;
     }
 
     private double getCustom(int level) {

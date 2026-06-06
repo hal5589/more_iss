@@ -77,6 +77,46 @@
   "ui.more_iss.freischutz.bypass_penalty": "§c契約の踏み倒しは許されない。悪魔の絶対的な執行が下った。",
   "ui.more_iss.freischutz.illegal_remove_penalty": "§c「報い」の拒絶、あるいは解除は許されない。悪魔の絶対的な執行が下った。",
 
+  "death.attack.sacrificial_purge": "%1$sの血液は膨大な魔力に耐え切れず破裂した",
 
-  "death.attack.sacrificial_purge": "%1$sの血液は膨大な魔力に耐え切れず破裂した"
+  "spell.more_iss.mark_of_detonation": "爆散の刻印",
+  "spell.more_iss.mark_of_detonation.guide": "印を刻み込む特殊なファイアボルトを放つ。刻印を3つ持つモブは爆発する。",
+  "item.irons_spellbooks.scroll.more_iss.mark_of_detonation": "爆散の刻印",
+  "effect.more_iss.datonation": "爆散の刻印",
+
+  "spell.more_iss.frost_armor": "氷の鎧",
+  "spell.more_iss.frost_armor.guide": "受けたダメージを黄色のハートに変換する鎧を身に纏う。",
+  "item.irons_spellbooks.scroll.more_iss.frost_armor": "氷の鎧",
+  "effect.more_iss.frost_armor": "氷の鎧",
+
+  "spell.more_iss.unfading": "不変",
+  "spell.more_iss.unfading.guide": "毒と衰弱を浄化する領域を展開する。",
+  "item.irons_spellbooks.scroll.more_iss.unfading": "不変",
+
+  "spell.more_iss.disintegration": "量子崩壊",
+  "spell.more_iss.disintegration.guide": "詠唱中、ターゲットにしたモブを固定し、発動時にその全てを量子単位で破壊する。あらゆる防御を無効化し、不死すらも貫く",
+  "item.irons_spellbooks.scroll.more_iss.disintegration": "量子崩壊",
+
+  "spell.more_iss.funnel": "ファンネル",
+  "spell.more_iss.funnel.guide": "空中に飛びあがり、着弾地点を爆破する砲撃を大量に発射する。",
+  "item.irons_spellbooks.scroll.more_iss.funnel": "ファンネル",
+
+  "death.attack.more_iss.disintegration": "%1$sの肉体は原子レベルで崩壊し、魂は天に昇華した。",
+  "death.attack.more_iss.disintegration.player": "%1$sの肉体は%2$sによって原子レベルで崩壊させられ、魂は天に昇華した。",
+
+  "entity.more_iss.napalm_rain": "ナパーム",
+  "spell.more_iss.napalm_rain": "ナパームレイン",
+  "spell.more_iss.napalm_rain.guide": "大量の爆弾をばらまき、周囲のモブに火炎ダメージと爆発ダメージを与える。",
+
+  "effect.more_iss.phoenix_blessing": "不死鳥の加護",
+  "spell.more_iss.phoenix_blessing": "不死鳥の加護",
+  "spell.more_iss.phoenix_blessing.guide": "不死鳥の加護を受け、死亡時に蘇生する。同時に複数のバフを得る。",
+  "ui.irons_spellbooks.revival_count": "蘇生可能回数: %s 回",
+  "ui.irons_spellbooks.duration": "効果時間: %s 秒",
+  "ui.irons_spellbooks.invulnerability_duration": "無敵時間: %s 秒",
+
+  "itemGroup.more_iss": "More ISS"
+
+
 }
+

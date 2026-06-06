@@ -19,7 +19,6 @@ import net.minecraft.world.phys.Vec3;
 import java.util.ArrayList;
 import java.util.List;
 
-@AutoSpellConfig
 public class ThunderboltFlash extends AbstractSpell {
 
     // ───────── 定数 ─────────
@@ -47,8 +46,8 @@ public class ThunderboltFlash extends AbstractSpell {
         this.baseSpellPower     = 25;
         this.spellPowerPerLevel = 5;
         this.castTime           = 40;
-        this.baseManaCost       = 200;
-        this.manaCostPerLevel = 100;
+        this.baseManaCost       = 100;
+        this.manaCostPerLevel = 75;
     }
 
     // ───────── AbstractSpell オーバーライド ─────────

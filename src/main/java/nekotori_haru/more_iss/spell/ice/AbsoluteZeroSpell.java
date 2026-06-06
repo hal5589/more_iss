@@ -27,7 +27,6 @@ import net.minecraft.world.level.Level;
 
 import java.util.List;
 
-@AutoSpellConfig
 public class AbsoluteZeroSpell extends AbstractSpell {
     private final ResourceLocation spellId = new ResourceLocation("more_iss", "absolute_zero");
 

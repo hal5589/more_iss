@@ -17,25 +17,26 @@ import mezz.jei.api.registration.IRecipeCatalystRegistration;
 import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.NonNullList;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeManager;
-import net.minecraft.core.NonNullList;
 import nekotori_haru.more_iss.More_iss;
 import nekotori_haru.more_iss.recipe.ArcaneCraftingRecipe;
 import nekotori_haru.more_iss.recipe.ArcaneCraftingRecipeType;
+import nekotori_haru.more_iss.registry.ModBlocks;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @JeiPlugin
+@SuppressWarnings("deprecation")
 public class MoreIssJeiPlugin implements IModPlugin {
 
-    private static final ResourceLocation PLUGIN_ID =
-            new ResourceLocation(More_iss.MODID, "jei_plugin");
+    private static final ResourceLocation PLUGIN_ID = new ResourceLocation(More_iss.MODID, "jei_plugin");
 
     @Override
     public ResourceLocation getPluginUid() {
@@ -72,7 +73,7 @@ public class MoreIssJeiPlugin implements IModPlugin {
     @Override
     public void registerRecipeCatalysts(IRecipeCatalystRegistration registration) {
         registration.addRecipeCatalyst(
-                new ItemStack(More_iss.ARCANE_CRAFTING_TABLE_ITEM.get()),
+                new ItemStack(ModBlocks.ARCANE_CRAFTING_TABLE_ITEM.get()),
                 ArcaneCraftingCategory.TYPE);
     }
 
@@ -84,7 +85,6 @@ public class MoreIssJeiPlugin implements IModPlugin {
         public static final RecipeType<ArcaneCraftingRecipe> TYPE =
                 RecipeType.create(More_iss.MODID, "arcane_crafting", ArcaneCraftingRecipe.class);
 
-        // 前回の微調整（1px左上寄せ）を完全に維持
         private static final int[][] CIRCLE_POS = {
                 { 80, 14  },  // 0: 上
                 { 120, 31 },  // 1: 右上
@@ -109,10 +109,9 @@ public class MoreIssJeiPlugin implements IModPlugin {
         public ArcaneCraftingCategory(IGuiHelper guiHelper) {
             ResourceLocation texture = new ResourceLocation(
                     More_iss.MODID, "textures/gui/arcane_crafting_table.png");
-            // 🌟 縦幅を「166」からインベントリ無しの「150」へ変更して下部をカット！
             this.background = guiHelper.createDrawable(texture, 0, 0, 176, 150);
             this.icon = guiHelper.createDrawableItemStack(
-                    new ItemStack(More_iss.ARCANE_CRAFTING_TABLE_ITEM.get()));
+                    new ItemStack(ModBlocks.ARCANE_CRAFTING_TABLE_ITEM.get()));
         }
 
         @Override
@@ -172,7 +171,7 @@ public class MoreIssJeiPlugin implements IModPlugin {
             }
         }
 
-        // ── 動的ロジック（完全維持） ───────────────────────────────────
+        // ── 動的ロジック ───────────────────────────────────
         private static List<ItemStack> buildIngredientStacks(
                 Ingredient ingredient, String spellId, int spellLevel) {
 

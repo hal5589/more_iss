@@ -251,3 +251,4 @@ public class ArcaneCraftingRecipe
     public String getResultSpellId() { return resultSpellId; }
     public int getResultSpellLevel() { return resultSpellLevel; }
 }
+

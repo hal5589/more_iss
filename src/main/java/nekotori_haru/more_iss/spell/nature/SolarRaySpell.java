@@ -15,6 +15,7 @@ import nekotori_haru.more_iss.More_iss;
 import nekotori_haru.more_iss.api.BeamType;
 import nekotori_haru.more_iss.entity.BaseBeamVisualEntity;
 import nekotori_haru.more_iss.registry.ModEffects;
+import nekotori_haru.more_iss.registry.ModEntities;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -69,7 +70,7 @@ public class SolarRaySpell extends AbstractSpell {
         double distance = hitResult.getLocation().distanceTo(entity.getEyePosition());
 
         if (!level.isClientSide) {
-            BaseBeamVisualEntity visual = new BaseBeamVisualEntity(More_iss.BASE_BEAM_VISUAL.get(), level, entity, distance, BeamType.SOLAR);
+            BaseBeamVisualEntity visual = new BaseBeamVisualEntity(ModEntities.BASE_BEAM_VISUAL.get(), level, entity, distance, BeamType.SOLAR);
             visual.setPos(entity.getX(), entity.getEyeY() - 0.2, entity.getZ());
             level.addFreshEntity(visual);
         }

@@ -1,5 +1,6 @@
 package nekotori_haru.more_iss.registry;
 
+import com.mojang.text2speech.OperatingSystem;
 import nekotori_haru.more_iss.More_iss;
 import nekotori_haru.more_iss.effect.*;
 import net.minecraft.world.effect.MobEffect;
@@ -40,6 +41,12 @@ public class ModEffects {
 
     public static final RegistryObject<MobEffect> MELTING =
             MOB_EFFECTS.register("melting", MeltingEffect::new);
+
+    public static final RegistryObject<MobEffect> DATONATION =
+            MOB_EFFECTS.register("datonation", DetonationEffect::new);
+
+    public static final RegistryObject<MobEffect> PHOENIX_BLESSING =
+            MOB_EFFECTS.register("phoenix_blessing", PhoenixBlessingEffect::new);
 
     public static void register(IEventBus eventBus) {
         MOB_EFFECTS.register(eventBus);

@@ -40,8 +40,8 @@ public class EnderShootingStar extends AbstractSpell {
     public EnderShootingStar() {
         this.baseSpellPower = 6;
         this.spellPowerPerLevel = 4;
-        this.baseManaCost = 250;
-        this.manaCostPerLevel = 30;
+        this.baseManaCost = 100;
+        this.manaCostPerLevel = 15;
         this.castTime = 20;
     }
 
