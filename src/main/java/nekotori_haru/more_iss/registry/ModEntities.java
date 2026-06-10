@@ -1,9 +1,7 @@
 package nekotori_haru.more_iss.registry;
 
 import nekotori_haru.more_iss.More_iss;
-import nekotori_haru.more_iss.entity.BaseBeamVisualEntity;
-import nekotori_haru.more_iss.entity.GlacialSwordEntity;
-import nekotori_haru.more_iss.entity.NapalmBombEntity;
+import nekotori_haru.more_iss.entity.*;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -26,6 +24,22 @@ public class ModEntities {
     public static final RegistryObject<EntityType<GlacialSwordEntity>> GLACIAL_SWORD = ENTITIES.register("glacial_sword", () ->
             EntityType.Builder.<GlacialSwordEntity>of(GlacialSwordEntity::new, MobCategory.MISC)
                     .sized(3.0f, 4.0f).clientTrackingRange(64).updateInterval(1).build("glacial_sword"));
+
+    public static final RegistryObject<EntityType<PolychromaticLanceEntity>> POLYCHROMATIC_LANCE =
+            ENTITIES.register("polychromatic_lance", () -> EntityType.Builder.<PolychromaticLanceEntity>of(
+                            PolychromaticLanceEntity::new, MobCategory.MISC)
+                    .sized(0.7f, 0.7f)
+                    .clientTrackingRange(64)
+                    .updateInterval(1)
+                    .build("polychromatic_lance"));
+
+    public static final RegistryObject<EntityType<PolychromaticBeamEntity>> POLYCHROMATIC_BEAM =
+            ENTITIES.register("polychromatic_beam", () -> EntityType.Builder.<PolychromaticBeamEntity>of(
+                            PolychromaticBeamEntity::new, MobCategory.MISC)
+                    .sized(0.1f, 0.1f)
+                    .clientTrackingRange(64)
+                    .updateInterval(1)
+                    .build("polychromatic_beam"));
 
     public static void register(IEventBus bus) {
         ENTITIES.register(bus);

@@ -1,4 +1,4 @@
-package nekotori_haru.more_iss.entity;
+package nekotori_haru.more_iss.client.renderer;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;

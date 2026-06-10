@@ -15,6 +15,7 @@ import nekotori_haru.more_iss.spell.lightning.*;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.RegistryObject;
+import nekotori_haru.more_iss.spell.synthesis.PolychromaticLanceSpell;
 
 public class ModSpells {
     public static final DeferredRegister<AbstractSpell> SPELLS =
@@ -25,6 +26,7 @@ public class ModSpells {
     public static final RegistryObject<AbstractSpell> MARK_OF_DETONATION = SPELLS.register("mark_of_detonation", MarkOfDetonationSpell::new);
     public static final RegistryObject<AbstractSpell> NAPALM_RAIN = SPELLS.register("napalm_rain", NapalmRainSpell::new);
     public static final RegistryObject<AbstractSpell> PHOENIX_BLESSING = SPELLS.register("phoenix_blessing", PhoenixBlessingSpell::new);
+    public static final RegistryObject<AbstractSpell> METEOR_FALL = SPELLS.register("meteor_fall", MeteorFallSpell::new);
 
     // 氷系統
     public static final RegistryObject<AbstractSpell> FROST_ARMOR = SPELLS.register("frost_armor", FrostArmorSpell::new);
@@ -59,6 +61,8 @@ public class ModSpells {
     public static final RegistryObject<AbstractSpell> SACRIFICIAL_EDGE = SPELLS.register("sacrificial_edge", SacrificialEdgeSpell::new);
     public static final RegistryObject<AbstractSpell> DISINTEGRATION = SPELLS.register("disintegration", DisintegrationSpell::new);
     public static final RegistryObject<AbstractSpell> FUNNEL = SPELLS.register("funnel", FunnelSpell::new);
+    public static final RegistryObject<AbstractSpell> POLYCHROMATIC_LANCE = SPELLS.register("polychromatic_lance", PolychromaticLanceSpell::new);
+    public static final RegistryObject<AbstractSpell> POLYCHROMATIC_BEAM = SPELLS.register("polychromatic_beam", PolychromaticBeamSpell::new);
 
     public static void register(IEventBus bus) {
         SPELLS.register(bus);

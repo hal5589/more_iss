@@ -115,6 +115,14 @@
   "ui.irons_spellbooks.duration": "効果時間: %s 秒",
   "ui.irons_spellbooks.invulnerability_duration": "無敵時間: %s 秒",
 
+  "spell.more_iss.meteor_fall": "メテオフォール",
+  "spell.more_iss.meteor_fall.description": "上空から隕石を降り注がせる",
+  "ui.irons_spellbooks.duration": "持続時間: %s 秒",
+
+  "spell.more_iss.polychromatic_beam": "ポリクロマティックビーム",
+  "spell.more_iss.polychromatic_beam.description": "継続的に魔法のビームを放つ",
+  "effect.more_iss.polychromatic_beam": "ポリクロマティックビーム",
+
   "itemGroup.more_iss": "More ISS"
 
 

@@ -1,11 +1,10 @@
 package nekotori_haru.more_iss;
 
 import com.mojang.logging.LogUtils;
-import nekotori_haru.more_iss.block.ArcaneCraftingTableBlock;
 import nekotori_haru.more_iss.blockentity.ArcaneCraftingTableBlockEntity;
 import nekotori_haru.more_iss.client.ArcaneCraftingScreen;
 import nekotori_haru.more_iss.client.model.GlacialExecution;
-import nekotori_haru.more_iss.entity.*;
+import nekotori_haru.more_iss.client.renderer.*;
 import nekotori_haru.more_iss.event.FrostArmorDamageEventHandler;
 import nekotori_haru.more_iss.menu.ArcaneCraftingMenu;
 import nekotori_haru.more_iss.network.ModNetwork;
@@ -97,6 +96,8 @@ public class More_iss {
     private void registerRenderers(final EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(ModEntities.BASE_BEAM_VISUAL.get(), BaseBeamRenderer::new);
         event.registerEntityRenderer(ModEntities.NAPALM_BOMB.get(), NapalmBombRenderer::new);
+        event.registerEntityRenderer(ModEntities.POLYCHROMATIC_LANCE.get(), PolychromaticLanceRenderer::new);
+        event.registerEntityRenderer(ModEntities.POLYCHROMATIC_BEAM.get(), PolychromaticBeamRenderer::new);
         event.registerEntityRenderer(ModEntities.GLACIAL_SWORD.get(), GlacialSwordRenderer::new);
     }
 

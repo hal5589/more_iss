@@ -4,6 +4,7 @@ import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
 import io.redspace.ironsspellbooks.api.spells.ISpellContainer;
 import io.redspace.ironsspellbooks.registries.ItemRegistry;
 import nekotori_haru.more_iss.More_iss;
+import nekotori_haru.more_iss.spell.synthesis.PolychromaticLanceSpell;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
@@ -28,6 +29,7 @@ public class CreativeTabRegistry {
                 addSpellScroll(output, ModSpells.MARK_OF_DETONATION.get());
                 addSpellScroll(output, ModSpells.NAPALM_RAIN.get());
                 addSpellScroll(output, ModSpells.PHOENIX_BLESSING.get());
+                addSpellScroll(output, ModSpells.METEOR_FALL.get());
 
                 // ===== 氷系統 =====
                 addSpellScroll(output, ModSpells.FROST_ARMOR.get());
@@ -62,6 +64,9 @@ public class CreativeTabRegistry {
                 addSpellScroll(output, ModSpells.SACRIFICIAL_EDGE.get());
                 addSpellScroll(output, ModSpells.DISINTEGRATION.get());
                 addSpellScroll(output, ModSpells.FUNNEL.get());
+                addSpellScroll(output, ModSpells.POLYCHROMATIC_LANCE.get());
+                addSpellScroll(output, ModSpells.POLYCHROMATIC_BEAM.get());
+
             })
             .build());
 

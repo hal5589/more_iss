@@ -62,31 +62,18 @@ public class ArcaneCraftingRecipe
     // ─── matches ──────────────────────────────────────────────────────────
     @Override
     public boolean matches(ArcaneCraftingTableBlockEntity.RecipeWrapper inv, Level level) {
-        boolean allEmpty = true;
-        for (int i = 0; i < 10; i++) {
-            if (!inv.getItem(i).isEmpty()) { allEmpty = false; break; }
-        }
-        if (!allEmpty) {
-            System.out.println("=== matches() called for: " + this.id + " ===");
-            for (int i = 0; i < 10; i++) {
-                System.out.println("  slot[" + i + "] = " + inv.getItem(i));
-            }
-        }
-
         for (int i = 0; i < 9; i++) {
             Ingredient ing = ingredients.get(i);
             ItemStack stack = inv.getItem(i);
 
             if (ing.isEmpty()) {
                 if (!stack.isEmpty()) {
-                    System.out.println("  -> Slot " + i + " failed: Recipe expects EMPTY, but slot has item.");
                     return false;
                 }
                 continue;
             }
 
             if (!ing.test(stack)) {
-                System.out.println("  -> Slot " + i + " failed: Ingredient type mismatch.");
                 return false;
             }
 
@@ -94,12 +81,10 @@ public class ArcaneCraftingRecipe
             CompoundTag recipeNBT = ingredientNBTs.get(i);
             if (recipeNBT != null && !recipeNBT.isEmpty() && recipeNBT.getAllKeys().size() > 0) {
                 if (!stack.hasTag()) {
-                    System.out.println("  -> Slot " + i + " failed: Recipe expects NBT, but item has no NBT.");
                     return false;
                 }
                 CompoundTag stackTag = stack.getTag();
                 if (stackTag == null || !nbtMatches(stackTag, recipeNBT)) {
-                    System.out.println("  -> Slot " + i + " failed: Raw NBT mismatch.");
                     return false;
                 }
             }
@@ -107,8 +92,7 @@ public class ArcaneCraftingRecipe
             // Required Spell チェック
             String requiredSpell = requiredSpells.get(i);
             if (requiredSpell != null && !requiredSpell.isEmpty()) {
-                if (!isScrollWithSpell(stack, requiredSpell, requiredLevels.get(i), i)) {
-                    System.out.println("  -> Slot " + i + " failed: Scroll spell/level verification failed.");
+                if (!isScrollWithSpell(stack, requiredSpell, requiredLevels.get(i))) {
                     return false;
                 }
             }
@@ -118,7 +102,6 @@ public class ArcaneCraftingRecipe
         if (catalyst != null && catalyst != Ingredient.EMPTY && catalyst.getItems().length > 0) {
             ItemStack catalystStack = inv.getItem(9);
             if (!catalyst.test(catalystStack)) {
-                System.out.println("  -> Catalyst slot failed: Item type mismatch.");
                 return false;
             }
 
@@ -129,7 +112,6 @@ public class ArcaneCraftingRecipe
             }
         }
 
-        System.out.println("  🎉 MATCH SUCCESS FOR RECIPE: " + this.id);
         return true;
     }
 
@@ -141,7 +123,7 @@ public class ArcaneCraftingRecipe
         return true;
     }
 
-    private boolean isScrollWithSpell(ItemStack stack, String requiredSpellId, int requiredLevel, int slotIndex) {
+    private boolean isScrollWithSpell(ItemStack stack, String requiredSpellId, int requiredLevel) {
         ResourceLocation itemId = ForgeRegistries.ITEMS.getKey(stack.getItem());
         if (itemId == null || !itemId.equals(new ResourceLocation("irons_spellbooks:scroll"))) {
             return false;
@@ -158,9 +140,6 @@ public class ArcaneCraftingRecipe
                     CompoundTag dataTag = dataList.getCompound(0);
                     String spellId = dataTag.getString("id");
                     int level = dataTag.getInt("level");
-
-                    System.out.println("    [Scroll Check Slot " + slotIndex + "] Slot Has: " + spellId + " (Lv " + level + ") | Required: " + requiredSpellId + " (Lv " + requiredLevel + ")");
-
                     return spellId.equals(requiredSpellId) && level >= requiredLevel;
                 }
             }
@@ -193,8 +172,6 @@ public class ArcaneCraftingRecipe
 
                 tag.put("irons_spellbooks:spell_container", containerTag);
                 spellScroll.setTag(tag);
-
-                System.out.println("  [Assemble Output] Generated Scroll NBT: " + tag);
                 return spellScroll;
             }
         }
@@ -206,7 +183,6 @@ public class ArcaneCraftingRecipe
     }
 
     // ─── ゲッター ─────────────────────────────────────────────────────────
-    // ⭕ 修正：メソッドの綴りを正確に変更（canCraftInDemensions -> canCraftInDimensions）
     @Override public boolean canCraftInDimensions(int w, int h) { return true; }
 
     @Override
@@ -251,4 +227,3 @@ public class ArcaneCraftingRecipe
     public String getResultSpellId() { return resultSpellId; }
     public int getResultSpellLevel() { return resultSpellLevel; }
 }
-
