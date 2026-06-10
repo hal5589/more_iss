@@ -38,8 +38,8 @@ public class PolychromaticBeamSpell extends AbstractSpell {
             .build();
 
     public PolychromaticBeamSpell() {
-        this.baseSpellPower = 1;
-        this.spellPowerPerLevel = 1;
+        this.baseSpellPower = 2;
+        this.spellPowerPerLevel = 2;
         this.manaCostPerLevel = 10;
         this.baseManaCost = 30;
         this.castTime = 100;

@@ -1,6 +1,7 @@
 package nekotori_haru.more_iss.entity;
 
 import io.redspace.ironsspellbooks.capabilities.magic.MagicManager;
+import nekotori_haru.more_iss.More_iss;
 import nekotori_haru.more_iss.registry.ModEntities;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
@@ -19,6 +20,9 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Random;
 
 public class PolychromaticBeamEntity extends Entity implements TraceableEntity {
@@ -59,7 +63,7 @@ public class PolychromaticBeamEntity extends Entity implements TraceableEntity {
     protected void defineSynchedData() {
         entityData.define(COLOR_OUTER, 0xCCAAFF);
         entityData.define(COLOR_INNER, 0xEECCFF);
-        entityData.define(LENGTH, 60.0f);
+        entityData.define(LENGTH, 32.0f);
         entityData.define(RADIUS, 0.25f);
     }
 
@@ -104,20 +108,8 @@ public class PolychromaticBeamEntity extends Entity implements TraceableEntity {
     }
 
     public void updateLength(float maxLength, Level level) {
-        if (owner == null) return;
-        Vec3 start = this.position();
-        Vec3 lookVec = this.getLookAngle();
-        Vec3 end = start.add(lookVec.scale(maxLength));
-
-        var hitResult = level.clip(new ClipContext(
-                start, end,
-                ClipContext.Block.COLLIDER,
-                ClipContext.Fluid.NONE,
-                this
-        ));
-
-        float length = (float) start.distanceTo(hitResult.getLocation());
-        if (length < 0.5f) length = 0.5f;
+        // 強制的に25ブロック以上の長さを維持
+        float length = Math.max(maxLength, 25.0f);
         this.entityData.set(LENGTH, length);
     }
 
@@ -126,60 +118,48 @@ public class PolychromaticBeamEntity extends Entity implements TraceableEntity {
 
         Vec3 start = owner.getEyePosition();
         Vec3 lookVec = owner.getLookAngle();
-        float maxRange = this.getLength();
 
-        // ⭐ 範囲を拡大（最大範囲も大きく）
-        float range = Math.max(maxRange, 3.0f);
+        // ⭐ 調整済みの値
+        float range = 25.0f;       // 届く距離: 25ブロック
+        float beamRadius = 1.2f;   // ビームの太さ: 直径約2.4ブロック
 
-        // ⭐ サーチボックスを大きく（視野角も拡大）
-        double searchRadius = range * 1.5;
+        double searchRadius = 25.0f;
         AABB searchBox = owner.getBoundingBox().inflate(searchRadius, searchRadius, searchRadius);
         var entities = this.level().getEntitiesOfClass(LivingEntity.class, searchBox,
                 e -> e != owner && e.isAlive());
 
-        LivingEntity closestTarget = null;
-        double closestDistance = range;
-
-        // ⭐ 視野角を広げる (0.85 → 0.6 で約53度以内)
-        double dotThreshold = 0.6;
+        List<LivingEntity> targetsInBeam = new ArrayList<>();
 
         for (LivingEntity target : entities) {
             Vec3 targetPos = target.getBoundingBox().getCenter();
-            Vec3 toTarget = targetPos.subtract(start).normalize();
-            double dot = toTarget.dot(lookVec);
-            if (dot < dotThreshold) continue;
+            Vec3 toTarget = targetPos.subtract(start);
+            double distanceAlongRay = toTarget.dot(lookVec);
 
-            double distance = start.distanceTo(targetPos);
-            // ⭐ 距離判定をより寛容に（最大範囲まで）
-            if (distance <= range) {
-                // 最も近い敵を選択（複数ではなく一番近い1体）
-                if (distance < closestDistance) {
-                    closestDistance = distance;
-                    closestTarget = target;
-                }
+            if (distanceAlongRay < 0 || distanceAlongRay > range) continue;
+
+            Vec3 closestPoint = start.add(lookVec.scale(distanceAlongRay));
+            double perpendicularDistance = targetPos.distanceTo(closestPoint);
+
+            if (perpendicularDistance <= beamRadius) {
+                targetsInBeam.add(target);
             }
         }
 
-        if (closestTarget != null) {
-            applyDamage(closestTarget);
+        for (LivingEntity target : targetsInBeam) {
+            applyDamage(target);
         }
     }
-
     private void applyDamage(LivingEntity target) {
         target.invulnerableTime = 0;
         target.hurtTime = 0;
 
-        // 毎回ランダムな効果タイプを決定
         int currentEffect = random.nextInt(3);
         float finalDamage = damage;
 
-        // ⭐ PolychromaticLanceEntity と同じ方式（矢のダメージソース + 効果タイプ別）
         DamageSource normalDamageSource = this.damageSources().indirectMagic(this, owner);
-        // キルクレジット用の微量ダメージ
         target.hurt(normalDamageSource, 0.1f);
 
         if (currentEffect == 0) {
-            // 防具貫通：魔法ダメージ + ダメージ増加
             finalDamage = damage * 1.3f;
             target.hurt(this.damageSources().magic(), finalDamage);
 
@@ -189,7 +169,6 @@ public class PolychromaticBeamEntity extends Entity implements TraceableEntity {
                         0, 0, 0);
             }
         } else if (currentEffect == 1) {
-            // 凍結
             target.hurt(this.damageSources().freeze(), finalDamage);
             target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 2));
             target.setTicksFrozen(40);
@@ -202,7 +181,6 @@ public class PolychromaticBeamEntity extends Entity implements TraceableEntity {
                         (random.nextDouble() - 0.5) * 0.5);
             }
         } else {
-            // 火炎
             target.hurt(this.damageSources().onFire(), finalDamage);
             target.setSecondsOnFire(3);
 
@@ -215,7 +193,6 @@ public class PolychromaticBeamEntity extends Entity implements TraceableEntity {
             }
         }
 
-        // 共通のヒットエフェクト
         MagicManager.spawnParticles(this.level(), ParticleTypes.ENCHANT,
                 target.getX(), target.getY() + target.getBbHeight() / 2, target.getZ(),
                 10, 0.5, 0.5, 0.5, 0.1, true);
