@@ -1,80 +1,153 @@
 package nekotori_haru.more_iss.entity;
 
 import io.redspace.ironsspellbooks.capabilities.magic.MagicManager;
-import io.redspace.ironsspellbooks.util.ParticleHelper;
 import nekotori_haru.more_iss.registry.ModEntities;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.projectile.AbstractArrow;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
-import net.minecraft.world.phys.Vec3;
-import io.redspace.ironsspellbooks.capabilities.magic.MagicManager;
 import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 
-public class PolychromaticLanceEntity extends AbstractArrow {
-    private int effectType; // 0:防具貫通, 1:凍結, 2:火炎
-    private boolean boundingBoxSet = false;
-    private boolean hasHit = false;
+import java.util.Optional;
 
-    public PolychromaticLanceEntity(EntityType<? extends AbstractArrow> entityType, Level level) {
+public class PolychromaticLanceEntity extends Projectile {
+    private int effectType;
+    private float damage;
+    private int lifeTicks = 0;
+    private static final int MAX_LIFE = 600;
+    private LivingEntity ownerCache;
+
+    public PolychromaticLanceEntity(EntityType<? extends PolychromaticLanceEntity> entityType, Level level) {
         super(entityType, level);
-        this.setNoGravity(true);
-        this.setNoPhysics(false);
-        this.pickup = Pickup.DISALLOWED;
     }
 
     public PolychromaticLanceEntity(Level level, LivingEntity owner, float damage, int effectType) {
         super(ModEntities.POLYCHROMATIC_LANCE.get(), level);
+        this.damage = damage;
         this.effectType = effectType;
-        this.setBaseDamage(damage);
-        this.setKnockback(0);
-        this.setNoGravity(true);
-        this.setNoPhysics(false);
+        this.ownerCache = owner;
         this.setOwner(owner);
-        this.pickup = Pickup.DISALLOWED;
+        this.setNoGravity(true);
     }
 
     @Override
-    public void tick() {
-        if (!boundingBoxSet && !this.level().isClientSide) {
-            this.setBoundingBox(this.getBoundingBox().inflate(0.6, 0.6, 0.6));
-            boundingBoxSet = true;
-        }
+    protected void defineSynchedData() {}
 
+    @Override
+    public void tick() {
         super.tick();
 
-        // 軌跡パーティクル (LightningLance方式)
-        if (this.level().isClientSide && this.tickCount % 2 == 0 && !hasHit) {
-            Vec3 vec3 = this.position().subtract(this.getDeltaMovement());
+        lifeTicks++;
+        if (lifeTicks >= MAX_LIFE) {
+            this.discard();
+            return;
+        }
+
+        this.setNoGravity(true);
+
+        if (this.isInWater()) {
+            this.setDeltaMovement(this.getDeltaMovement());
+        }
+
+        Vec3 start = this.position();
+        Vec3 delta = this.getDeltaMovement();
+        Vec3 end = start.add(delta);
+
+        // ⭐ サーバー側のみ衝突処理（クライアントでは行わない）
+        if (!this.level().isClientSide) {
+            Optional<EntityHitResult> entityHit = this.findHitEntity(start, end);
+            if (entityHit.isPresent()) {
+                this.onHitEntity(entityHit.get());
+                return;
+            }
+
+            BlockHitResult blockHit = this.level().clip(new net.minecraft.world.level.ClipContext(
+                    start, end,
+                    net.minecraft.world.level.ClipContext.Block.COLLIDER,
+                    net.minecraft.world.level.ClipContext.Fluid.NONE,
+                    this
+            ));
+            if (blockHit.getType() != HitResult.Type.MISS) {
+                this.onHitBlock(blockHit);
+                this.discard();
+                return;
+            }
+        }
+
+        // 移動（クライアント側でも移動する）
+        this.setPos(end.x, end.y, end.z);
+
+        // 軌跡パーティクル（クライアント側のみ）
+        if (this.level().isClientSide && this.tickCount % 2 == 0) {
+            Vec3 pos = this.position();
             if (effectType == 0) {
-                this.level().addParticle(ParticleTypes.END_ROD, vec3.x, vec3.y, vec3.z, 0, 0, 0);
+                this.level().addParticle(ParticleTypes.END_ROD, pos.x, pos.y, pos.z, 0, 0, 0);
             } else if (effectType == 1) {
-                this.level().addParticle(ParticleTypes.SNOWFLAKE, vec3.x, vec3.y, vec3.z, 0, 0, 0);
+                this.level().addParticle(ParticleTypes.SNOWFLAKE, pos.x, pos.y, pos.z, 0, 0, 0);
             } else {
-                this.level().addParticle(ParticleTypes.FLAME, vec3.x, vec3.y, vec3.z, 0, 0, 0);
+                this.level().addParticle(ParticleTypes.FLAME, pos.x, pos.y, pos.z, 0, 0, 0);
             }
         }
     }
 
+    private Optional<EntityHitResult> findHitEntity(Vec3 start, Vec3 end) {
+        AABB searchBox = this.getBoundingBox().expandTowards(end.subtract(start)).inflate(1.0);
+        var entities = this.level().getEntitiesOfClass(LivingEntity.class, searchBox,
+                e -> e != this.getOwner() && e.isAlive());
+
+        EntityHitResult closestHit = null;
+        double closestDist = Double.MAX_VALUE;
+
+        for (LivingEntity target : entities) {
+            AABB targetBox = target.getBoundingBox().inflate(0.3);
+            Optional<Vec3> hitPos = targetBox.clip(start, end);
+            if (hitPos.isPresent()) {
+                double dist = start.distanceToSqr(hitPos.get());
+                if (dist < closestDist) {
+                    closestDist = dist;
+                    closestHit = new EntityHitResult(target, hitPos.get());
+                }
+            }
+        }
+        return Optional.ofNullable(closestHit);
+    }
+
+    public void shoot(double x, double y, double z, float speed, float divergence) {
+        Vec3 vec3 = (new Vec3(x, y, z)).normalize();
+        this.setDeltaMovement(vec3.scale(speed));
+        this.setYRot((float) Math.toDegrees(Math.atan2(x, z)));
+        this.setXRot((float) Math.toDegrees(Math.atan2(y, Math.sqrt(x * x + z * z))));
+    }
+
     @Override
     protected void onHitEntity(EntityHitResult result) {
-        if (hasHit) return;
-        hasHit = true;
+        // サーバー側でのみ処理
+        if (this.level().isClientSide) return;
 
         if (result.getEntity() instanceof LivingEntity target) {
-            float damage = (float) this.getBaseDamage();
-            float finalDamage = damage;
-            LivingEntity owner = (LivingEntity) this.getOwner();
+            LivingEntity owner = this.ownerCache;
+            if (owner == null && this.getOwner() instanceof LivingEntity) {
+                owner = (LivingEntity) this.getOwner();
+            }
 
-            DamageSource normalDamageSource = this.damageSources().arrow(this, owner);
-            target.hurt(normalDamageSource, 0.1f);
+            float finalDamage = damage;
+
+            // プレイヤーソースの微量ダメージ (キルクレジット用)
+            DamageSource killCreditSource = this.damageSources().indirectMagic(this, owner);
+            target.hurt(killCreditSource, 0.1f);
 
             if (effectType == 0) {
                 finalDamage = damage * 1.3f;
@@ -87,50 +160,70 @@ public class PolychromaticLanceEntity extends AbstractArrow {
                 target.hurt(this.damageSources().onFire(), finalDamage);
                 target.setSecondsOnFire(3);
             }
-        }
 
+            // パーティクル（サーバー側でもOK、MagicManagerはサーバー側で動作）
+            MagicManager.spawnParticles(this.level(), ParticleTypes.ENCHANT,
+                    target.getX(), target.getY() + target.getBbHeight() / 2, target.getZ(),
+                    30, 0.8, 0.8, 0.8, 0.2, true);
+            MagicManager.spawnParticles(this.level(), ParticleTypes.SOUL_FIRE_FLAME,
+                    target.getX(), target.getY() + target.getBbHeight() / 2, target.getZ(),
+                    20, 0.6, 0.6, 0.6, 0.15, true);
+            MagicManager.spawnParticles(this.level(), ParticleTypes.SNOWFLAKE,
+                    target.getX(), target.getY() + target.getBbHeight() / 2, target.getZ(),
+                    20, 0.6, 0.6, 0.6, 0.15, true);
+            MagicManager.spawnParticles(this.level(), ParticleTypes.END_ROD,
+                    target.getX(), target.getY() + target.getBbHeight() / 2, target.getZ(),
+                    15, 0.5, 0.5, 0.5, 0.1, true);
+            for (int i = 0; i < 360; i += 45) {
+                double rad = Math.toRadians(i);
+                double px = target.getX() + Math.cos(rad) * 1.5;
+                double pz = target.getZ() + Math.sin(rad) * 1.5;
+                MagicManager.spawnParticles(this.level(), ParticleTypes.FIREWORK,
+                        px, target.getY() + 0.5, pz, 1, 0, 0.1, 0, 0, true);
+            }
+        }
         this.discard();
     }
 
     @Override
     protected void onHitBlock(BlockHitResult result) {
-        if (hasHit) return;
-        hasHit = true;
+        if (this.level().isClientSide) return;
+
+        Vec3 pos = result.getLocation();
+        MagicManager.spawnParticles(this.level(), ParticleTypes.ENCHANT,
+                pos.x, pos.y + 0.5, pos.z, 40, 0.5, 0.5, 0.5, 0.5, true);
+        MagicManager.spawnParticles(this.level(), ParticleTypes.SOUL_FIRE_FLAME,
+                pos.x, pos.y + 0.5, pos.z, 30, 0.4, 0.4, 0.4, 0.4, true);
+        MagicManager.spawnParticles(this.level(), ParticleTypes.SNOWFLAKE,
+                pos.x, pos.y + 0.5, pos.z, 30, 0.4, 0.4, 0.4, 0.4, true);
+        MagicManager.spawnParticles(this.level(), ParticleTypes.END_ROD,
+                pos.x, pos.y + 0.5, pos.z, 20, 0.3, 0.3, 0.3, 0.3, true);
+        MagicManager.spawnParticles(this.level(), ParticleTypes.EXPLOSION,
+                pos.x, pos.y + 0.5, pos.z, 1, 0.5, 0.5, 0.5, 0, true);
         this.discard();
     }
 
     @Override
-    protected void onHit(HitResult result) {
-        // ⭐ LightningLance方式のパーティクル発生
-        if (!this.level().isClientSide) {
-            Vec3 pos = result.getLocation();
-
-            // 魔法パーティクル (ENCHANT)
-            MagicManager.spawnParticles(this.level(), ParticleTypes.ENCHANT,
-                    pos.x, pos.y + 0.5, pos.z, 40, 0.5, 0.5, 0.5, 0.5, true);
-
-            // 炎パーティクル (SOUL_FIRE_FLAME)
-            MagicManager.spawnParticles(this.level(), ParticleTypes.SOUL_FIRE_FLAME,
-                    pos.x, pos.y + 0.5, pos.z, 30, 0.4, 0.4, 0.4, 0.4, true);
-
-            // 氷パーティクル (SNOWFLAKE)
-            MagicManager.spawnParticles(this.level(), ParticleTypes.SNOWFLAKE,
-                    pos.x, pos.y + 0.5, pos.z, 30, 0.4, 0.4, 0.4, 0.4, true);
-
-            // 光パーティクル (END_ROD)
-            MagicManager.spawnParticles(this.level(), ParticleTypes.END_ROD,
-                    pos.x, pos.y + 0.5, pos.z, 20, 0.3, 0.3, 0.3, 0.3, true);
-
-            // 爆発パーティクル
-            MagicManager.spawnParticles(this.level(), ParticleTypes.EXPLOSION,
-                    pos.x, pos.y + 0.5, pos.z, 1, 0.5, 0.5, 0.5, 0, true);
-        }
-
-        super.onHit(result);
+    protected boolean canHitEntity(Entity entity) {
+        return entity != this.getOwner() && super.canHitEntity(entity);
     }
 
     @Override
-    protected ItemStack getPickupItem() {
-        return ItemStack.EMPTY;
+    protected void addAdditionalSaveData(CompoundTag tag) {
+        super.addAdditionalSaveData(tag);
+        tag.putInt("EffectType", effectType);
+        tag.putFloat("Damage", damage);
+    }
+
+    @Override
+    protected void readAdditionalSaveData(CompoundTag tag) {
+        super.readAdditionalSaveData(tag);
+        this.effectType = tag.getInt("EffectType");
+        this.damage = tag.getFloat("Damage");
+    }
+
+    @Override
+    public Packet<ClientGamePacketListener> getAddEntityPacket() {
+        return new ClientboundAddEntityPacket(this);
     }
 }

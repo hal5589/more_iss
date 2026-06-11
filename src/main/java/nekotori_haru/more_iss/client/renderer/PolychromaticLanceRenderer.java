@@ -23,15 +23,15 @@ import org.joml.Matrix4f;
 public class PolychromaticLanceRenderer extends EntityRenderer<PolychromaticLanceEntity> {
     private static final ResourceLocation TEXTURE = new ResourceLocation(More_iss.MODID, "textures/entity/polychromatic_lance.png");
 
-    // ========== 自分で調整できるパラメータ ==========
+    // ========== 調整パラメータ ==========
     private static final float SCALE = 0.8f;           // 全体の大きさ
-    private static final float LENGTH = 6.0f;          // 槍の長さ (大きいほど長い)
-    private static final float WIDTH = 1.2f;           // 槍の幅 (大きいほど太い)
-    private static final float UV_OFFSET_X = 0.5f;     // UVのX中心位置 (0.0～1.0) テクスチャの中心ずらす場合
-    private static final float UV_TOP = 1.0f;          // 先端のUV (下端)
-    private static final float UV_BOTTOM = 0.0f;       // 柄のUV (上端)    // 柄のUV (0.0～1.0) 大きいほどテクスチャの下側
-    private static final float ANGLE = 0.0f;          // クロスする角度 (0～90)
-    // =============================================
+    private static final float LENGTH = 6.0f;          // 槍の長さ
+    private static final float WIDTH = 1.2f;           // 槍の幅
+    private static final float UV_OFFSET_X = 0.5f;     // UVのX中心位置
+    private static final float UV_TOP = 1.0f;          // 先端のUV (上端)
+    private static final float UV_BOTTOM = 0.0f;       // 柄のUV (下端)
+    private static final float ANGLE = 0.0f;           // クロス角度
+    // =================================
 
     public PolychromaticLanceRenderer(EntityRendererProvider.Context context) {
         super(context);
@@ -47,17 +47,14 @@ public class PolychromaticLanceRenderer extends EntityRenderer<PolychromaticLanc
                        PoseStack poseStack, MultiBufferSource bufferSource, int light) {
         poseStack.pushPose();
 
-        // 移動方向に基づいて回転
         Vec3 motion = entity.getDeltaMovement();
         float xRot = -((float) (Mth.atan2(motion.horizontalDistance(), motion.y) * (180F / Math.PI)) - 90.0F);
         float yRot = -((float) (Mth.atan2(motion.z, motion.x) * (180F / Math.PI)) + 90.0F);
         poseStack.mulPose(Axis.YP.rotationDegrees(yRot));
         poseStack.mulPose(Axis.XP.rotationDegrees(xRot));
 
-        // スケール調整
         poseStack.scale(SCALE, SCALE, SCALE);
 
-        // モデル描画
         renderModel(poseStack, bufferSource);
 
         poseStack.popPose();
@@ -69,53 +66,48 @@ public class PolychromaticLanceRenderer extends EntityRenderer<PolychromaticLanc
         Matrix4f poseMatrix = pose.pose();
         Matrix3f normalMatrix = pose.normal();
 
-        // テクスチャUV設定
-        float uvMinX = UV_OFFSET_X - 0.5f;
-        float uvMaxX = UV_OFFSET_X + 0.5f;
-        float uvTop = UV_TOP;
-        float uvBottom = UV_BOTTOM;
-
-        // 槍のサイズ
         float halfWidth = WIDTH;
         float halfHeight = LENGTH;
 
-        // 透過対応のRenderTypeを使用
+        float uvMinX = UV_OFFSET_X - 0.5f;
+        float uvMaxX = UV_OFFSET_X + 0.5f;
+
         VertexConsumer consumer = bufferSource.getBuffer(RenderType.entityTranslucent(TEXTURE));
 
         // ===== 垂直平面 =====
         poseStack.mulPose(Axis.XP.rotationDegrees(ANGLE));
 
-        // 頂点1 (左下 - 柄側)
+        // 頂点1 (左下 - 先端側) → テクスチャ下端
         consumer.vertex(poseMatrix, 0, -halfWidth, -halfHeight)
                 .color(255, 255, 255, 255)
-                .uv(uvMinX, uvBottom)
+                .uv(uvMinX, UV_BOTTOM)
                 .overlayCoords(OverlayTexture.NO_OVERLAY)
                 .uv2(LightTexture.FULL_BRIGHT)
                 .normal(0f, 1f, 0f)
                 .endVertex();
 
-        // 頂点2 (右下 - 柄側)
+        // 頂点2 (右下 - 先端側)
         consumer.vertex(poseMatrix, 0, halfWidth, -halfHeight)
                 .color(255, 255, 255, 255)
-                .uv(uvMaxX, uvBottom)
+                .uv(uvMaxX, UV_BOTTOM)
                 .overlayCoords(OverlayTexture.NO_OVERLAY)
                 .uv2(LightTexture.FULL_BRIGHT)
                 .normal(0f, 1f, 0f)
                 .endVertex();
 
-        // 頂点3 (右上 - 先端側)
+        // 頂点3 (右上 - 柄側)
         consumer.vertex(poseMatrix, 0, halfWidth, halfHeight)
                 .color(255, 255, 255, 255)
-                .uv(uvMaxX, uvTop)
+                .uv(uvMaxX, UV_TOP)
                 .overlayCoords(OverlayTexture.NO_OVERLAY)
                 .uv2(LightTexture.FULL_BRIGHT)
                 .normal(0f, 1f, 0f)
                 .endVertex();
 
-        // 頂点4 (左上 - 先端側)
+        // 頂点4 (左上 - 柄側)
         consumer.vertex(poseMatrix, 0, -halfWidth, halfHeight)
                 .color(255, 255, 255, 255)
-                .uv(uvMinX, uvTop)
+                .uv(uvMinX, UV_TOP)
                 .overlayCoords(OverlayTexture.NO_OVERLAY)
                 .uv2(LightTexture.FULL_BRIGHT)
                 .normal(0f, 1f, 0f)
@@ -126,37 +118,37 @@ public class PolychromaticLanceRenderer extends EntityRenderer<PolychromaticLanc
         // ===== 水平平面 =====
         poseStack.mulPose(Axis.YP.rotationDegrees(-ANGLE));
 
-        // 頂点1 (左下 - 柄側)
+        // 頂点1 (左下 - 先端側)
         consumer.vertex(poseMatrix, -halfWidth, 0, -halfHeight)
                 .color(255, 255, 255, 255)
-                .uv(uvMinX, uvBottom)
+                .uv(uvMinX, UV_BOTTOM)
                 .overlayCoords(OverlayTexture.NO_OVERLAY)
                 .uv2(LightTexture.FULL_BRIGHT)
                 .normal(0f, 1f, 0f)
                 .endVertex();
 
-        // 頂点2 (右下 - 柄側)
+        // 頂点2 (右下 - 先端側)
         consumer.vertex(poseMatrix, halfWidth, 0, -halfHeight)
                 .color(255, 255, 255, 255)
-                .uv(uvMaxX, uvBottom)
+                .uv(uvMaxX, UV_BOTTOM)
                 .overlayCoords(OverlayTexture.NO_OVERLAY)
                 .uv2(LightTexture.FULL_BRIGHT)
                 .normal(0f, 1f, 0f)
                 .endVertex();
 
-        // 頂点3 (右上 - 先端側)
+        // 頂点3 (右上 - 柄側)
         consumer.vertex(poseMatrix, halfWidth, 0, halfHeight)
                 .color(255, 255, 255, 255)
-                .uv(uvMaxX, uvTop)
+                .uv(uvMaxX, UV_TOP)
                 .overlayCoords(OverlayTexture.NO_OVERLAY)
                 .uv2(LightTexture.FULL_BRIGHT)
                 .normal(0f, 1f, 0f)
                 .endVertex();
 
-        // 頂点4 (左上 - 先端側)
+        // 頂点4 (左上 - 柄側)
         consumer.vertex(poseMatrix, -halfWidth, 0, halfHeight)
                 .color(255, 255, 255, 255)
-                .uv(uvMinX, uvTop)
+                .uv(uvMinX, UV_TOP)
                 .overlayCoords(OverlayTexture.NO_OVERLAY)
                 .uv2(LightTexture.FULL_BRIGHT)
                 .normal(0f, 1f, 0f)

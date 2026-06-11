@@ -28,7 +28,7 @@ public class ModEntities {
     public static final RegistryObject<EntityType<PolychromaticLanceEntity>> POLYCHROMATIC_LANCE =
             ENTITIES.register("polychromatic_lance", () -> EntityType.Builder.<PolychromaticLanceEntity>of(
                             PolychromaticLanceEntity::new, MobCategory.MISC)
-                    .sized(0.7f, 0.7f)
+                    .sized(0.5f, 0.5f)
                     .clientTrackingRange(64)
                     .updateInterval(1)
                     .build("polychromatic_lance"));

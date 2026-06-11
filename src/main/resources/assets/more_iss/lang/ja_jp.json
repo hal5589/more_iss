@@ -120,8 +120,33 @@
   "ui.irons_spellbooks.duration": "持続時間: %s 秒",
 
   "spell.more_iss.polychromatic_beam": "ポリクロマティックビーム",
-  "spell.more_iss.polychromatic_beam.description": "継続的に魔法のビームを放つ",
+  "spell.more_iss.polychromatic_beam.guide": "継続的に魔法のビームを放つ。",
   "effect.more_iss.polychromatic_beam": "ポリクロマティックビーム",
+
+  "spell.more_iss.glacial_execution": "氷の裁き",
+  "spell.more_iss.glacial_execution.guide": "巨大な氷の大剣を召喚し、前方のモブに裁きを与える。",
+  "item.irons_spellbooks.scroll.more_iss.glacial_execution": "スクロール: グレイシャル・エクスキューション",
+
+  "spell.more_iss.polychromatic_lance": "ポリクロマティックランス",
+  "spell.more_iss.polychromatic_lance.guide": "（説明文）",
+  "item.irons_spellbooks.scroll.more_iss.polychromatic_lance": "スクロール: ポリクロマティックランス",
+
+
+  "entity.more_iss.napalm_bomb": "ナパーム",
+  "entity.more_iss.glacial_sword": "グレイシャルソード",
+  "entity.more_iss.polychromatic_beam": "ポリクロマティックビーム",
+  "entity.more_iss.polychromatic_lance": "ポリクロマティックランス",
+  "entity.more_iss.base_beam_visual": "ビームエフェクト",
+
+  "attribute.name.more_iss.synthesis_spell_power": "融合魔法威力",
+  "attribute.name.more_iss.synthesis_magic_resist": "融合魔法耐性",
+
+  "death.attack.more_iss.flame_ray": "%1$sはフレイムレイで%2$sに焼き尽くされた",
+  "death.attack.more_iss.solar_ray": "%1$sはソーラーレイで%2$sに溶かされた",
+  "death.attack.more_iss.holy_ray": "%1$sはホーリーレイで%2$sに裁かれた",
+  "death.attack.more_iss.void_ray": "%1$sはヴォイドレイで%2$sに飲み込まれた",
+  "death.attack.more_iss.spectal_ray": "%1$sはスペクタルレイで%2$sに貫かれた",
+  "death.attack.more_iss.funnel": "%1$sは%2$sのファンネルの爆撃で消し飛んだ",
 
   "itemGroup.more_iss": "More ISS"
 

@@ -44,8 +44,8 @@ public class MeteorFallSpell extends AbstractSpell {
     public MeteorFallSpell() {
         this.baseSpellPower = 12;
         this.spellPowerPerLevel = 3;
-        this.manaCostPerLevel = 30;
-        this.baseManaCost = 100;
+        this.manaCostPerLevel = 15;
+        this.baseManaCost = 30;
         this.castTime = 100;
     }
 
