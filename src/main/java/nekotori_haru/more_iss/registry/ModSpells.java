@@ -76,6 +76,7 @@ public class ModSpells {
     public static final RegistryObject<AbstractSpell> POLYCHROMATIC_BEAM = SPELLS.register("polychromatic_beam", PolychromaticBeamSpell::new);
     public static final RegistryObject<AbstractSpell> SUMMON_WIZARDS = SPELLS.register("summon_wizards", SummonWizardsSpell::new);
     public static final RegistryObject<AbstractSpell> STARLIGHT = SPELLS.register("starlight", StarlightSpell::new);
+    public static final RegistryObject<AbstractSpell> SEVEN_COLORED_CAGE = SPELLS.register("seven_colored_cage", SevenColoredCageSpell::new);
 
     public static void register(IEventBus bus) {
         SPELLS.register(bus);

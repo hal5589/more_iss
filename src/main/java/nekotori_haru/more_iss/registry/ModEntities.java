@@ -19,6 +19,10 @@ public class ModEntities {
             EntityType.Builder.<BaseBeamVisualEntity>of(BaseBeamVisualEntity::new, MobCategory.MISC)
                     .sized(0.5f, 0.5f).clientTrackingRange(64).updateInterval(1).build("base_beam_visual"));
 
+    public static final RegistryObject<EntityType<BeamWarningEntity>> BEAM_WARNING = ENTITIES.register("beam_warning", () ->
+            EntityType.Builder.<BeamWarningEntity>of(BeamWarningEntity::new, MobCategory.MISC)
+                    .sized(0.2f, 0.2f).clientTrackingRange(64).updateInterval(1).build("beam_warning"));
+
     public static final RegistryObject<EntityType<NapalmBombEntity>> NAPALM_BOMB = ENTITIES.register("napalm_bomb", () ->
             EntityType.Builder.<NapalmBombEntity>of(NapalmBombEntity::new, MobCategory.MISC)
                     .sized(0.3f, 0.3f).clientTrackingRange(64).updateInterval(1).build("napalm_bomb"));

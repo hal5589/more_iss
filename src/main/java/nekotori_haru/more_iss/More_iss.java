@@ -105,6 +105,7 @@ public class More_iss {
     // ───────────── レンダラー登録 ─────────────
     private void registerRenderers(final EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(ModEntities.BASE_BEAM_VISUAL.get(), BaseBeamRenderer::new);
+        event.registerEntityRenderer(ModEntities.BEAM_WARNING.get(), BeamWarningRenderer::new);
         event.registerEntityRenderer(ModEntities.NAPALM_BOMB.get(), NapalmBombRenderer::new);
         event.registerEntityRenderer(ModEntities.POLYCHROMATIC_LANCE.get(), PolychromaticLanceRenderer::new);
         event.registerEntityRenderer(ModEntities.POLYCHROMATIC_BEAM.get(), PolychromaticBeamRenderer::new);
@@ -117,6 +118,7 @@ public class More_iss {
     // ───────────── レイヤー定義登録 ─────────────
     private void registerLayerDefinitions(final EntityRenderersEvent.RegisterLayerDefinitions event) {
         event.registerLayerDefinition(BaseBeamRenderer.MODEL_LAYER_LOCATION, BaseBeamRenderer::createBodyLayer);
+        event.registerLayerDefinition(BeamWarningRenderer.MODEL_LAYER_LOCATION, BeamWarningRenderer::createBodyLayer);
         event.registerLayerDefinition(GlacialExecution.LAYER_LOCATION, GlacialExecution::createBodyLayer);
     }
 
