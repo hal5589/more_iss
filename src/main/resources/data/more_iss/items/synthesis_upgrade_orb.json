@@ -1,0 +1,14 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "more_iss:item/synthesis_upgrade_orb"
+  },
+  "properties": {
+    "max_stack_size": 1,
+    "rarity": "epic",
+    "fire_resistant": true
+  },
+  "components": {
+    "irons_spellbooks:upgrade_orb_type": "more_iss:synthesis_power"
+  }
+}

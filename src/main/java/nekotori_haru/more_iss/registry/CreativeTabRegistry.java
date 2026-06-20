@@ -21,52 +21,76 @@ public class CreativeTabRegistry {
             .title(Component.translatable("itemGroup.more_iss"))
             .icon(() -> new ItemStack(ModBlocks.ARCANE_CRAFTING_TABLE_ITEM.get()))
             .displayItems((parameters, output) -> {
-                // ===== ブロック =====
+
                 output.accept(ModBlocks.ARCANE_CRAFTING_TABLE_ITEM.get());
 
-                // ===== 火系統 =====
+                //素材
+                output.accept(ModItems.PHOENIX_FALLEN_FEATHER.get());
+                output.accept(ModItems.BLAZING_NOVA.get());
+                output.accept(ModItems.RECORD_OF_THE_GODS.get());
+                output.accept(ModItems.PRIMAL_CORE.get());
+                output.accept(ModItems.ABSOLUTE_ZERO_SHARD.get());
+                output.accept(ModItems.FORBIDDEN_GRIMOIRE.get());
+                output.accept(ModItems.MANA_CIRCUIT.get());
+
+                //装備
+                output.accept(ModItems.RING_OF_SYNTHESIS.get());
+                output.accept(ModItems.RING_OF_MANA_CYCLE.get());
+                output.accept(ModItems.SPELLBOOK_OF_CONCENTRATION.get());
+
+                //アプグレ
+                output.accept(ModItems.SYNTHESIS_UPGRADE_ORB.get());
+
+
+                //火
                 addSpellScroll(output, ModSpells.FLAME_RAY.get());
                 addSpellScroll(output, ModSpells.MARK_OF_DETONATION.get());
                 addSpellScroll(output, ModSpells.NAPALM_RAIN.get());
                 addSpellScroll(output, ModSpells.PHOENIX_BLESSING.get());
                 addSpellScroll(output, ModSpells.METEOR_FALL.get());
+                addSpellScroll(output, ModSpells.SUMMON_PYROMANCER.get());
 
-                // ===== 氷系統 =====
+                //氷
                 addSpellScroll(output, ModSpells.FROST_ARMOR.get());
                 addSpellScroll(output, ModSpells.GLACIAL_EXECUTION.get());
                 addSpellScroll(output, ModSpells.ABSOLUTE_ZERO.get());
+                addSpellScroll(output, ModSpells.SUMMON_CRYOMANCER.get());
+                addSpellScroll(output, ModSpells.SUMMON_CRYOMANCER.get());
 
-                // ===== 雷系統 =====
+                //雷
                 addSpellScroll(output, ModSpells.RAISEN.get());
 
-                // ===== 自然系統 =====
+                //自然
                 addSpellScroll(output, ModSpells.SOLAR_RAY.get());
                 addSpellScroll(output, ModSpells.UNFADING.get());
+                addSpellScroll(output, ModSpells.SUMMON_APOTHECARIST.get());
 
-                // ===== 聖系統 =====
+                //聖
                 addSpellScroll(output, ModSpells.HOLY_RAY.get());
                 addSpellScroll(output, ModSpells.HEAVENLY_BLAST.get());
                 addSpellScroll(output, ModSpells.PROVIDENTIAL_CONDUIT.get());
+                addSpellScroll(output, ModSpells.SUMMON_PRIEST.get());
 
-                // ===== エンダー系統 =====
+                //エンダー
                 addSpellScroll(output, ModSpells.ENDER_SHOOTING_STAR.get());
                 addSpellScroll(output, ModSpells.FREISCHUTZ.get());
                 addSpellScroll(output, ModSpells.VOID_RAY.get());
 
-                // ===== 召喚系統 =====
+                //召喚
                 addSpellScroll(output, ModSpells.SPECTAL_RAY.get());
+                addSpellScroll(output, ModSpells.SUMMON_ARCHEVOKER.get());
 
-                // ===== エルドリッチ系統 =====
+                //エルドリッチ
                 addSpellScroll(output, ModSpells.SOUL_LINK.get());
 
-                // ===== 合成系統 =====
+                //融合
                 addSpellScroll(output, ModSpells.OVERBURST_BLOOD.get());
                 addSpellScroll(output, ModSpells.SACRIFICIAL_EDGE.get());
                 addSpellScroll(output, ModSpells.DISINTEGRATION.get());
                 addSpellScroll(output, ModSpells.FUNNEL.get());
                 addSpellScroll(output, ModSpells.POLYCHROMATIC_LANCE.get());
                 addSpellScroll(output, ModSpells.POLYCHROMATIC_BEAM.get());
-
+                addSpellScroll(output, ModSpells.SUMMON_WIZARDS.get());
             })
             .build());
 

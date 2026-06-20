@@ -1,0 +1,22 @@
+{
+  "type": "more_iss:arcane_crafting",
+  "ingredients": [
+    { "item": "minecraft:dragon_breath"},
+    { "item": "minecraft:blaze_rod" },
+    { "item": "minecraft:dragon_breath"},
+    { "item": "minecraft:blaze_rod" },
+    { "item": "minecraft:dragon_breath"},
+    { "item": "minecraft:blaze_rod" },
+    { "item": "minecraft:dragon_breath"},
+    { "item": "minecraft:blaze_rod" },
+    { "item": "minecraft:totem_of_undying" }
+  ],
+  "catalyst": {
+    "item": "more_iss:phoenix_fallen_feather"
+  },
+  "catalyst_consume": true,
+  "result_spell": {
+    "id": "more_iss:phoenix_blessing",
+    "level": 1
+  }
+}

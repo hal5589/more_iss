@@ -81,7 +81,6 @@ public class NapalmBombEntity extends Entity {
                             random.x * 0.5f, random.y * 0.5f, random.z * 0.5f);
                 }
             } else {
-                // 着地後：くすぶり
                 this.level().addParticle(ParticleTypes.SMOKE,
                         this.getX(), this.getY() + 0.2, this.getZ(),
                         0, 0.02, 0);
@@ -122,7 +121,6 @@ public class NapalmBombEntity extends Entity {
         AABB boundingBox = this.getBoundingBox().inflate(radius);
         List<LivingEntity> targets = world.getEntitiesOfClass(LivingEntity.class, boundingBox);
 
-        // ノックバック先行
         for (LivingEntity target : targets) {
             if (target == owner) continue;
             double distance = target.distanceTo(this);
@@ -143,7 +141,6 @@ public class NapalmBombEntity extends Entity {
             }
         }
 
-        // ダメージ＋着火
         for (LivingEntity target : targets) {
             if (target == owner) continue;
             double distance = target.distanceTo(this);
@@ -160,22 +157,16 @@ public class NapalmBombEntity extends Entity {
             }
         }
 
-        // 🌟 【修正の核心：確実に存在する安定の spawnParticles でオリジナル爆発を作る】
-        // 存在しない独自メソッドを完全に廃止し、ISS公式の安定メソッド「spawnParticles」を重ねて叩きます。
-        // これにより、ISS特有の魔法粒子とバニラの爆発・炎が合わさり、ナパームらしい超ド派手な炎上爆発になります！
         double x = this.getX();
         double y = this.getY() + 0.15;
         double z = this.getZ();
 
-        // 1. ISSの魔法粒子（EMBERS）を広範囲に散らす（ナパームの飛び散る火の粉を再現）
         MagicManager.spawnParticles(serverWorld, ParticleHelper.EMBERS,
                 x, y, z, 50, radius * 0.5, radius * 0.5, radius * 0.5, 0.15D, false);
 
-        // 2. バニラの大きな爆発の煙（視覚的なインパクト）
         MagicManager.spawnParticles(serverWorld, ParticleTypes.EXPLOSION,
                 x, y, z, 5, radius * 0.3, radius * 0.3, radius * 0.3, 0.0D, false);
 
-        // 3. 激しい炎の粒子（ナパームの燃え盛る演出）
         MagicManager.spawnParticles(serverWorld, ParticleTypes.FLAME,
                 x, y, z, 40, radius * 0.4, radius * 0.4, radius * 0.4, 0.1D, false);
 

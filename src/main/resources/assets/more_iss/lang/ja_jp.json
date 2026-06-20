@@ -12,7 +12,7 @@
   "spell.more_iss.void_ray.guide": "虚空の力を集束させた濃い紫色のレーザーを放つ。他の光線魔法を圧倒する射程を誇る。",
 
   "spell.more_iss.spectal_ray": "スペクタルレイ",
-  "spell.more_iss.spectal_ray.guide": "半透明の薄水色の幻影光線を放つ。命中した対象に20秒間の「導き」を付与する。",
+  "spell.more_iss.spectal_ray.guide": "半透明の薄水色の幻影光線を放つ。命中した対象に召喚したモブの注意を集中させる。",
 
   "spell.more_iss.ender_shooting_star": "魔法の流星",
   "spell.more_iss.ender_shooting_star.guide": "大量のマジックミサイルを流星のごとく発射する。",
@@ -56,7 +56,7 @@
   "block.more_iss.fusion_table": "融合作業台",
   "container.more_iss.arcane_crafting_table": "§d融合作業台",
   "container.more_iss.arcane_anvil_crafting": "魔法合成",
-  "school.more_iss.synthesis": "融合",
+  "school.more_iss.synthesis": ":_M融合",
   "gui.more_iss.catalyst": "触媒",
 
 
@@ -93,9 +93,9 @@
   "spell.more_iss.unfading.guide": "毒と衰弱を浄化する領域を展開する。",
   "item.irons_spellbooks.scroll.more_iss.unfading": "不変",
 
-  "spell.more_iss.disintegration": "量子崩壊",
+  "spell.more_iss.disintegration": ":_M量子崩壊",
   "spell.more_iss.disintegration.guide": "詠唱中、ターゲットにしたモブを固定し、発動時にその全てを量子単位で破壊する。あらゆる防御を無効化し、不死すらも貫く",
-  "item.irons_spellbooks.scroll.more_iss.disintegration": "量子崩壊",
+  "item.irons_spellbooks.scroll.more_iss.disintegration": ":_M量子崩壊",
 
   "spell.more_iss.funnel": "ファンネル",
   "spell.more_iss.funnel.guide": "空中に飛びあがり、着弾地点を爆破する砲撃を大量に発射する。",
@@ -112,7 +112,6 @@
   "spell.more_iss.phoenix_blessing": "不死鳥の加護",
   "spell.more_iss.phoenix_blessing.guide": "不死鳥の加護を受け、死亡時に蘇生する。同時に複数のバフを得る。",
   "ui.irons_spellbooks.revival_count": "蘇生可能回数: %s 回",
-  "ui.irons_spellbooks.duration": "効果時間: %s 秒",
   "ui.irons_spellbooks.invulnerability_duration": "無敵時間: %s 秒",
 
   "spell.more_iss.meteor_fall": "メテオフォール",
@@ -120,7 +119,7 @@
   "ui.irons_spellbooks.duration": "持続時間: %s 秒",
 
   "spell.more_iss.polychromatic_beam": "ポリクロマティックビーム",
-  "spell.more_iss.polychromatic_beam.guide": "継続的に魔法のビームを放つ。",
+  "spell.more_iss.polychromatic_beam.guide": "氷、炎、魔法の3つの属性を持つ虹のビームを放ち、視線上の敵にダメージを与える。",
   "effect.more_iss.polychromatic_beam": "ポリクロマティックビーム",
 
   "spell.more_iss.glacial_execution": "氷の裁き",
@@ -128,7 +127,7 @@
   "item.irons_spellbooks.scroll.more_iss.glacial_execution": "スクロール: グレイシャル・エクスキューション",
 
   "spell.more_iss.polychromatic_lance": "ポリクロマティックランス",
-  "spell.more_iss.polychromatic_lance.guide": "（説明文）",
+  "spell.more_iss.polychromatic_lance.guide": "氷、炎、魔法の3つの属性をもつ虹の槍を放ち、命中した敵にダメージを与える。",
   "item.irons_spellbooks.scroll.more_iss.polychromatic_lance": "スクロール: ポリクロマティックランス",
 
 
@@ -148,8 +147,47 @@
   "death.attack.more_iss.spectal_ray": "%1$sはスペクタルレイで%2$sに貫かれた",
   "death.attack.more_iss.funnel": "%1$sは%2$sのファンネルの爆撃で消し飛んだ",
 
-  "itemGroup.more_iss": "More ISS"
+  "item.more_iss.ring_of_synthesis": ":_M融合のリング",
+  "item.more_iss.ring_of_synthesis.effect": "装備時効果:",
 
+  "attribute.more_iss.synthesis_spell_power": ":_M融合魔法威力",
+  "item.more_iss.synthesis_upgrade_orb": ":_M融合のアップグレードオーブ",
+  "item.more_iss.synthesis_upgrade_orb.effect.detail": ":_M融合属性の威力 +5%",
+
+  "item.more_iss.phoenix_fallen_feather": "§6不死鳥の落羽",
+  "item.more_iss.blazing_nova": ":_M獄炎の新星",
+  "item.more_iss.record_of_the_gods": "§e神々の記録",
+  "item.more_iss.primal_core": "原初の核",
+  "item.more_iss.absolute_zero_shard": "§b絶対零度の欠片",
+  "item.more_iss.forbidden_grimoire": "§d禁忌のグリモア",
+  "item.more_iss.mana_circuit": "魔力回路",
+
+  "item.more_iss.ring_of_mana_cycle": "魔力循環の指輪",
+
+  "item.more_iss.spellbook_of_concentration": "専心の魔法書",
+
+  "entity.more_iss.summoned_pyromancer": "召喚された紅蓮術師",
+  "entity.more_iss.summoned_cryomancer": "召喚された氷魔術師",
+  "entity.more_iss.summoned_priest": "召喚された司祭",
+  "entity.more_iss.summoned_archevoker": "召喚されたアーキヴォーカー",
+  "entity.more_iss.summoned_apothecarist": "召喚された薬剤師",
+  "spell.more_iss.summon_pyromancer": "紅蓮術師の召喚",
+  "spell.more_iss.summon_cryomancer": "氷魔術師の召喚",
+  "spell.more_iss.summon_priest": "司祭の召喚",
+  "spell.more_iss.summon_archevoker": "アーキヴォーカーの召喚",
+  "spell.more_iss.summon_apothecarist": "薬剤師の召喚",
+  "ui.more_iss.summon_power": "召喚強化率: %s%%",
+
+  "item.more_iss.spellbook_of_concentration.boost": "魔法書に入れた全てのスペルをレベル+3",
+
+  "itemGroup.more_iss": "More ISS",
+
+  "spell.more_iss.summon_wizards": "魔術師の招集",
+  "spell.more_iss.summon_wizards.guide": "§7五人の魔術師を同時に召喚する",
+
+  "spell.more_iss.starlight": "スターライト",
+  "spell.more_iss.starlight.guide": "空中に浮遊する星を複数ばら撒き、一定時間後に星が爆発するレジェンダリー魔法",
+  "entity.more_iss.star": "星"
 
 }
 

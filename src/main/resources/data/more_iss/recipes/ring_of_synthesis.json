@@ -1,0 +1,22 @@
+{
+  "type": "more_iss:arcane_crafting",
+  "ingredients": [
+    { "item": "irons_spellbooks:blood_upgrade_orb" },
+    { "item": "irons_spellbooks:fire_upgrade_orb" },
+    { "item": "irons_spellbooks:holy_upgrade_orb" },
+    { "item": "irons_spellbooks:nature_upgrade_orb" },
+    { "item": "irons_spellbooks:evocation_upgrade_orb" },
+    { "item": "irons_spellbooks:ice_upgrade_orb" },
+    { "item": "irons_spellbooks:lightning_upgrade_orb" },
+    { "item": "irons_spellbooks:ender_upgrade_orb" },
+    { "item": "irons_spellbooks:affinity_ring" }
+  ],
+  "catalyst": {
+    "item": "minecraft:nether_star"
+  },
+  "catalyst_consume": true,
+  "result": {
+    "item": "more_iss:ring_of_synthesis",
+    "count": 1
+  }
+}

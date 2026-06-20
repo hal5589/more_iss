@@ -28,7 +28,7 @@ public class PhoenixBlessingSpell extends AbstractSpell {
             .setSchoolResource(SchoolRegistry.FIRE_RESOURCE)
             .setMaxLevel(3)
             .setCooldownSeconds(660)
-            .setAllowCrafting(true)
+            .setAllowCrafting(false)
             .build();
 
     public PhoenixBlessingSpell() {

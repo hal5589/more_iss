@@ -42,7 +42,7 @@ public class MarkOfDetonationProjectile extends FireboltProjectile {
             var currentEffect = target.getEffect(ModEffects.DATONATION.get());
             int currentAmp = (currentEffect != null) ? currentEffect.getAmplifier() : -1;
 
-            // amplifier 1（2発目）を持っていたら3発目 → 爆発
+
             if (currentAmp == 1) {
                 target.removeEffect(ModEffects.DATONATION.get());
                 triggerExplosion(target, shooter);
@@ -50,8 +50,8 @@ public class MarkOfDetonationProjectile extends FireboltProjectile {
                 return;
             }
 
-            // 0発目 or 1発目：デバフを積む（0→1）
-            int nextAmplifier = currentAmp + 1; // -1→0, 0→1
+
+            int nextAmplifier = currentAmp + 1;
             target.addEffect(new MobEffectInstance(
                     ModEffects.DATONATION.get(),
                     140,
@@ -93,7 +93,6 @@ public class MarkOfDetonationProjectile extends FireboltProjectile {
         AABB boundingBox = center.getBoundingBox().inflate(damageRadius);
         List<LivingEntity> targets = world.getEntitiesOfClass(LivingEntity.class, boundingBox);
 
-        // ノックバック先行
         for (LivingEntity target : targets) {
             double distance = target.distanceTo(center);
             if (distance <= damageRadius) {
@@ -116,9 +115,6 @@ public class MarkOfDetonationProjectile extends FireboltProjectile {
             }
         }
 
-        // 1tick後にダメージ（ノックバックを先に反映させるため）
-        // ここでは同tickで処理。ノックバック問題が再発する場合はScheduledExecutorではなく
-        // DetonationEffectの2tick方式に戻すことを検討してください。
         for (LivingEntity target : targets) {
             double distance = target.distanceTo(center);
             if (distance <= damageRadius) {
@@ -132,7 +128,6 @@ public class MarkOfDetonationProjectile extends FireboltProjectile {
             }
         }
 
-        // エフェクト
         serverWorld.sendParticles(
                 ParticleTypes.EXPLOSION_EMITTER,
                 center.getX(),

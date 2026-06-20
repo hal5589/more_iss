@@ -1,0 +1,22 @@
+{
+  "type": "more_iss:arcane_crafting",
+  "ingredients": [
+    { "item": "irons_spellbooks:mithril_scrap" },
+    { "item": "minecraft:gold_ingot" },
+    { "item": "irons_spellbooks:mithril_scrap" },
+    { "item": "minecraft:gold_ingot" },
+    { "item": "irons_spellbooks:mithril_scrap" },
+    { "item": "minecraft:gold_ingot" },
+    { "item": "irons_spellbooks:mithril_scrap" },
+    { "item": "minecraft:gold_ingot" },
+    { "item": "minecraft:amethyst_shard" }
+  ],
+  "catalyst": {
+    "item": "minecraft:redstone"
+  },
+  "catalyst_consume": true,
+  "result": {
+    "item": "more_iss:mana_circuit",
+    "count": 1
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "amount": 0.05,
+  "attribute": "more_iss:synthesis_spell_power",
+  "containerItem": {
+    "count": 1,
+    "id": "more_iss:synthesis_upgrade_orb"
+  },
+  "operation": "MULTIPLY_BASE"
+}

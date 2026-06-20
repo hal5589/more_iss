@@ -1,0 +1,22 @@
+{
+  "type": "more_iss:arcane_crafting",
+  "ingredients": [
+    { "item": "minecraft:diamond" },
+    { "item": "irons_spellbooks:arcane_ingot" },
+    { "item": "irons_spellbooks:magic_cloth" },
+    { "item": "irons_spellbooks:arcane_ingot" },
+    { "item": "irons_spellbooks:hogskin" },
+    { "item": "irons_spellbooks:arcane_ingot" },
+    { "item": "irons_spellbooks:magic_cloth" },
+    { "item": "irons_spellbooks:arcane_ingot" },
+    { "item": "irons_spellbooks:diamond_spell_book" }
+  ],
+  "catalyst": {
+    "item": "irons_spellbooks:mithril_weave"
+  },
+  "catalyst_consume": true,
+  "result": {
+    "item": "more_iss:spellbook_of_concentration",
+    "count": 1
+  }
+}

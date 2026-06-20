@@ -1,0 +1,22 @@
+{
+  "type": "more_iss:arcane_crafting",
+  "ingredients": [
+    { "item": "irons_spellbooks:blood_rune" },
+    { "item": "irons_spellbooks:fire_rune" },
+    { "item": "irons_spellbooks:holy_rune" },
+    { "item": "irons_spellbooks:nature_rune" },
+    { "item": "irons_spellbooks:evocation_rune" },
+    { "item": "irons_spellbooks:ice_rune" },
+    { "item": "irons_spellbooks:lightning_rune" },
+    { "item": "irons_spellbooks:ender_rune" },
+    { "item": "irons_spellbooks:upgrade_orb" }
+  ],
+  "catalyst": {
+    "item": "irons_spellbooks:mithril_ingot"
+  },
+  "catalyst_consume": true,
+  "result": {
+    "item": "more_iss:synthesis_upgrade_orb",
+    "count": 1
+  }
+}

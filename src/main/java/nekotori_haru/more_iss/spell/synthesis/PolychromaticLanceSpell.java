@@ -2,7 +2,6 @@ package nekotori_haru.more_iss.spell.synthesis;
 
 import io.redspace.ironsspellbooks.api.config.DefaultConfig;
 import io.redspace.ironsspellbooks.api.magic.MagicData;
-import io.redspace.ironsspellbooks.api.registry.SchoolRegistry;
 import io.redspace.ironsspellbooks.api.spells.*;
 import io.redspace.ironsspellbooks.api.util.AnimationHolder;
 import io.redspace.ironsspellbooks.api.util.Utils;
@@ -10,6 +9,7 @@ import io.redspace.ironsspellbooks.registries.SoundRegistry;
 import nekotori_haru.more_iss.More_iss;
 import nekotori_haru.more_iss.entity.PolychromaticLanceEntity;
 import nekotori_haru.more_iss.registry.SynthesisSchoolRegistry;
+import nekotori_haru.more_iss.util.SynthesisPowerUtil;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
@@ -89,8 +89,10 @@ public class PolychromaticLanceSpell extends AbstractSpell {
         super.onCast(level, spellLevel, entity, castSource, playerMagicData);
     }
 
+    // ⭐ 修正: 合成倍率を適用
     private float getDamage(int spellLevel, LivingEntity caster) {
-        return this.baseSpellPower + (spellLevel * this.spellPowerPerLevel) + getSpellPower(spellLevel, caster);
+        float baseDamage = this.baseSpellPower + (spellLevel * this.spellPowerPerLevel) + getSpellPower(spellLevel, caster);
+        return SynthesisPowerUtil.calculateDamage(baseDamage, caster);
     }
 
     @Override

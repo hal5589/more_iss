@@ -7,7 +7,9 @@
     "MixinLivingEntity",
     "MixinEntity"
   ],
-  "client": [],
+  "client": [
+    "client.FontMixin"
+  ],
   "server": [],
   "injectors": {
     "defaultRequire": 1
