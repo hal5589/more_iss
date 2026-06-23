@@ -187,7 +187,9 @@
 
   "spell.more_iss.starlight": "スターライト",
   "spell.more_iss.starlight.guide": "空中に浮遊する星を複数ばら撒き、一定時間後に星が爆発するレジェンダリー魔法",
-  "entity.more_iss.star": "星"
+  "entity.more_iss.star": "星",
+
+  "ui.more_iss.oblivion.blocked": "忘却の彼方の効果により魔法を遮断された"
 
 }
 

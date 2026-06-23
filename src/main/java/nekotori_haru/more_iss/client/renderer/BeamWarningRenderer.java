@@ -22,9 +22,7 @@ import net.minecraft.util.Mth;
 
 /**
  * 予告線レンダラー。
- * BaseBeamRendererの極細版。属性カラーの細い棒を、エンティティ位置から
- * 固定方向(直下)へdistance分だけ伸ばして描画する。
- * 当たり判定や着弾エフェクトは持たず、見た目のみ。
+ * 属性カラーの細い棒を、エンティティ位置から方向ベクトルに沿ってdistance分だけ伸ばして描画する。
  */
 public class BeamWarningRenderer extends EntityRenderer<BeamWarningEntity> {
     public static final ModelLayerLocation MODEL_LAYER_LOCATION =
@@ -33,9 +31,15 @@ public class BeamWarningRenderer extends EntityRenderer<BeamWarningEntity> {
     private static final ResourceLocation TEXTURE_CORE =
             ResourceLocation.fromNamespaceAndPath(IronsSpellbooks.MODID, "textures/entity/ray_of_frost/core.png");
 
-    // ⭐ 本体ビームのbody(-6,-16,-6, 12,32,12)に対して大幅に縮小した極細の棒
+    // モデルサイズ（ピクセル単位）
     private static final float ROD_HALF_WIDTH = 0.6f;
-    private static final float ROD_SEGMENT_LENGTH = 32f;
+    private static final float ROD_SEGMENT_HEIGHT = 32f;  // モデルの高さ
+
+    // レンダリングスケール（視認性を確保）
+    private static final float RENDER_SCALE = 0.15f;
+
+    // セグメント間隔（モデル高さの半分で重ねて連続的に見せる）
+    private static final float SEGMENT_STEP = ROD_SEGMENT_HEIGHT * 0.5f;  // 16
 
     private final ModelPart body;
 
@@ -50,7 +54,7 @@ public class BeamWarningRenderer extends EntityRenderer<BeamWarningEntity> {
         PartDefinition partdefinition = meshdefinition.getRoot();
         partdefinition.addOrReplaceChild("body",
                 CubeListBuilder.create().texOffs(0, 0)
-                        .addBox(-ROD_HALF_WIDTH, -16, -ROD_HALF_WIDTH, ROD_HALF_WIDTH * 2, 32, ROD_HALF_WIDTH * 2),
+                        .addBox(-ROD_HALF_WIDTH, -16, -ROD_HALF_WIDTH, ROD_HALF_WIDTH * 2, ROD_SEGMENT_HEIGHT, ROD_HALF_WIDTH * 2),
                 PartPose.ZERO);
         return LayerDefinition.create(meshdefinition, 64, 64);
     }
@@ -60,28 +64,37 @@ public class BeamWarningRenderer extends EntityRenderer<BeamWarningEntity> {
                        MultiBufferSource bufferSource, int light) {
         poseStack.pushPose();
 
-        float lifetime = BeamWarningEntity.WARNING_DURATION;
-        float scalar = 0.05f; // ⭐ 本体(0.25f)よりさらに細く
-        float length = ROD_SEGMENT_LENGTH * scalar * scalar;
         float f = entity.tickCount + partialTicks;
 
-        // 固定方向(常に直下)に向けてモデルを回転させる
-        // direction は常に (0,-1,0) 固定のため、モデルのY軸方向(下方向)に
-        // そのまま伸ばせばよく、追加の回転は不要(回転を加えると横倒しになってしまう)
-        poseStack.scale(scalar, scalar, scalar);
+        // スケール適用
+        poseStack.scale(RENDER_SCALE, RENDER_SCALE, RENDER_SCALE);
 
-        // 終盤にフェードアウトしていく予告線
-        float alpha = 0.6f * Mth.clamp(1f - f / lifetime, 0.1f, 1f);
+        // フェードアウト（寿命に応じて）
+        float lifetime = BeamWarningEntity.WARNING_DURATION;
+        float alpha = 0.8f * Mth.clamp(1f - f / lifetime, 0.1f, 1f);
+
+        // 属性カラー
         int packedColor = entity.getBeamType().getColor();
         float r = ((packedColor >> 16) & 0xFF) / 255.0f;
         float g = ((packedColor >> 8) & 0xFF) / 255.0f;
         float b = (packedColor & 0xFF) / 255.0f;
 
-        double totalLength = entity.getLength() * 4;
+        // ⭐ セグメント数計算（間隔を SEGMENT_STEP にして短距離でも複数セグメント表示）
+        double beamLength = entity.getLength();
+        float stepWorld = SEGMENT_STEP * RENDER_SCALE;  // 実際のワールド座標での間隔
+        int segments = (int) Math.ceil(beamLength / stepWorld);
+        // 最低でも2セグメントは表示（短すぎるときは2つで間隔を調整）
+        if (segments < 2) segments = 2;
+
+        // デバッグログ（必要に応じてコメントアウト）
+        // System.out.println("[BeamWarning] segments=" + segments + ", length=" + beamLength);
+
         VertexConsumer consumer = bufferSource.getBuffer(RenderType.energySwirl(TEXTURE_CORE, 0, 0));
 
-        for (float i = 0; i < totalLength; i += length) {
-            poseStack.translate(0, -length, 0);
+        // モデルを上から下に向かって積み重ねる（Y軸負方向）
+        // 方向ベクトルが真下（0,-1,0）であることを前提
+        for (int i = 0; i < segments; i++) {
+            poseStack.translate(0, -SEGMENT_STEP, 0);
             poseStack.pushPose();
             this.body.render(poseStack, consumer, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, r, g, b, alpha);
             poseStack.popPose();

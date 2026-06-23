@@ -66,6 +66,8 @@ public class ModSpells {
 
     // エルドリッチ系統
     public static final RegistryObject<AbstractSpell> SOUL_LINK = SPELLS.register("soul_link", SoulLinkSpell::new);
+    public static final RegistryObject<AbstractSpell> OBLIVION = SPELLS.register("oblivion", OblivionSpell::new);
+
 
     // 合成系統
     public static final RegistryObject<AbstractSpell> OVERBURST_BLOOD = SPELLS.register("overburst_blood", OverburstBloodSpell::new);

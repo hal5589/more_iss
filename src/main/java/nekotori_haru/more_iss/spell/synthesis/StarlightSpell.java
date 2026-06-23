@@ -118,11 +118,16 @@ public class StarlightSpell extends AbstractSpell {
     }
 
     public float getDamage(int spellLevel, LivingEntity caster) {
-        return 8.0f + 4.0f * getSpellPower(spellLevel, caster);
+        // ⭐ レベルが上がるほど倍率がかかる(lv1=x1, lv2=x2, lv3=x3 ...)
+        float base = 8.0f + 4.0f * getSpellPower(spellLevel, caster);
+        return base * Math.max(1, spellLevel);
     }
 
     public float getRadius(int spellLevel, LivingEntity caster) {
-        return 4.0f + getSpellPower(spellLevel, caster) * 0.5f;
+        // ⭐ 範囲はダメージより緩やかに: レベルごとに+1.1倍 (lv1=x1.0, lv2=x1.1, lv3=x1.2 ...)
+        float base = 4.0f + getSpellPower(spellLevel, caster) * 0.5f;
+        float levelMultiplier = 1.0f + (Math.max(1, spellLevel) - 1) * 0.1f;
+        return base * levelMultiplier;
     }
 
     public int getStarCount(int spellLevel, LivingEntity caster) {

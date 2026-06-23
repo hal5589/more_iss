@@ -48,6 +48,10 @@ public class ModEffects {
     public static final RegistryObject<MobEffect> PHOENIX_BLESSING =
             MOB_EFFECTS.register("phoenix_blessing", PhoenixBlessingEffect::new);
 
+    // 「忘却の彼方」デバフ（魔法使用を完全に封印するマーカーエフェクト）の登録
+    public static final RegistryObject<MobEffect> OBLIVION =
+            MOB_EFFECTS.register("oblivion", OblivionEffect::new);
+
     public static void register(IEventBus eventBus) {
         MOB_EFFECTS.register(eventBus);
     }

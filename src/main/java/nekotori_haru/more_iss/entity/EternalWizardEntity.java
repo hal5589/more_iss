@@ -1,8 +1,11 @@
 package nekotori_haru.more_iss.entity;
 
+import io.redspace.ironsspellbooks.api.magic.MagicData;
+import io.redspace.ironsspellbooks.api.magic.SpellSelectionManager;
 import io.redspace.ironsspellbooks.api.registry.AttributeRegistry;
 import io.redspace.ironsspellbooks.api.registry.SpellRegistry;
 import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
+import io.redspace.ironsspellbooks.api.spells.CastSource;
 import io.redspace.ironsspellbooks.entity.mobs.abstract_spell_casting_mob.AbstractSpellCastingMob;
 import io.redspace.ironsspellbooks.entity.mobs.goals.*;
 import io.redspace.ironsspellbooks.registries.SoundRegistry;
@@ -236,22 +239,21 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
         //   （weightを省略した registerPattern は常に weight=1.0 として扱われる）
 
         // ---- フェーズ1 (体力80%以上) ----
-        registerPatternWeighted("phase1_close", 1, 0, 7, 4.0,
+        registerPatternWeighted("phase1_close", 1, 0, 8, 4.0,
                 castAndWaitAction(SpellRegistry.SHADOW_SLASH.get(), 1),
                 waitAction(50)
         );
 
-        registerPatternWeighted("phase1_close2", 1, 0, 5,2.5,
-                castAndWaitAction(SpellRegistry.FIRE_BREATH_SPELL.get(), 2),
-                waitAction(40)
+        registerPatternWeighted("phase1_close2", 1, 0, 7, 4.0,
+                castMultiCustomAction(
+                        CastEntry.of(SpellRegistry.CONE_OF_COLD_SPELL.get(), 2, 20, 3),
+                        CastEntry.of(SpellRegistry.FIRE_BREATH_SPELL.get(), 2, 20, 3),
+                        CastEntry.of(SpellRegistry.DRAGON_BREATH_SPELL.get(), 2, 20, 3)
+
+                )
         );
 
-        registerPatternWeighted("phase1_close3", 1, 0, 5, 1.7,
-                castAndWaitAction(SpellRegistry.CONE_OF_COLD_SPELL.get(), 2),
-                waitAction(40)
-        );
-
-        registerPatternWeighted("phase1_close4", 1, 0, 10, 1.0,
+        registerPatternWeighted("phase1_close3", 1, 0, 10, 0.3,
                 castAndWaitAction(SpellRegistry.THUNDERSTORM_SPELL.get(), 1)
         );
 
@@ -275,30 +277,70 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
                 castMultiCustomAction(
                         CastEntry.of(SpellRegistry.FIRE_ARROW_SPELL.get(), 2, 0, 5),
                         CastEntry.of(SpellRegistry.FIRE_ARROW_SPELL.get(), 2, 0, 3),
-                        CastEntry.of(SpellRegistry.FIRE_ARROW_SPELL.get(), 2, 0, 3),
                         CastEntry.of(SpellRegistry.FIRE_ARROW_SPELL.get(), 2, 0, 3)
                 ),
                 waitAction(100)
         );
 
-        // ---- フェーズ2 (体力60%〜80%) ----
-        registerPattern("phase2_close", 2, 0, 12,
+
+        registerPatternWeighted("phase1_mid4", 1, 10, 25, 2.0,
                 castMultiCustomAction(
-                        CastEntry.of(SpellRegistry.FIREBALL_SPELL.get(), 3, 4, 6),
-                        CastEntry.of(SpellRegistry.CHAIN_LIGHTNING_SPELL.get(), 3, 4, 6)
+                        CastEntry.of(ModSpells.ENDER_SHOOTING_STAR.get(), 2, 0, 5)
                 ),
-                waitAction(10)
+                waitAction(100
+                )
         );
 
-        registerPattern("phase2_mid", 2, 12, 25,
-                castAndWaitAction(ModSpells.HEAVENLY_BLAST.get(), 9),
-                waitAction(25)
+        // ---- フェーズ2 (体力60%〜80%) ----
+        registerPatternWeighted("phase2_close", 2, 0, 12,1.5,
+                castMultiCustomAction(
+                        CastEntry.of(ModSpells.MARK_OF_DETONATION.get(), 2, 0, 1),
+                        CastEntry.of(ModSpells.MARK_OF_DETONATION.get(), 2, 0, 1),
+                        CastEntry.of(ModSpells.MARK_OF_DETONATION.get(), 2, 0, 1),
+                        CastEntry.of(ModSpells.MARK_OF_DETONATION.get(), 2, 0, 1),
+                        CastEntry.of(ModSpells.MARK_OF_DETONATION.get(), 2, 0, 1),
+                        CastEntry.of(ModSpells.MARK_OF_DETONATION.get(), 2, 0, 1)
+                ),
+                waitAction(20)
         );
+
+        registerPatternWeighted("phase2_mid", 2, 12, 25,0.2,
+                castAndWaitAction(ModSpells.HEAVENLY_BLAST.get(), 9),
+                waitAction(130)
+        );
+
+        registerPatternWeighted("phase2_mid", 2, 12, 25, 1.0,
+                castMultiCustomAction(
+                        CastEntry.of(SpellRegistry.POISON_ARROW_SPELL.get(), 10, 0, 10),
+                        CastEntry.of(SpellRegistry.FIRE_ARROW_SPELL.get(), 10, 0, 10),
+                        CastEntry.of(SpellRegistry.MAGIC_ARROW_SPELL.get(), 10, 0, 10),
+                        CastEntry.of(SpellRegistry.BLOOD_NEEDLES_SPELL.get(), 10, 0, 10)
+                ),
+                waitAction(130)
+        );
+
+        registerPatternWeighted("phase2_close2", 2, 0, 10, 1.0,
+                castMultiCustomAction(
+                        CastEntry.of(ModSpells.STARLIGHT.get(), 10,0,10),
+                        CastEntry.of(ModSpells.STARLIGHT.get(), 10,0,10),
+                        CastEntry.of(ModSpells.STARLIGHT.get(), 10,0,10),
+                        CastEntry.of(ModSpells.STARLIGHT.get(), 10,0,10)
+                ),
+                waitAction(40)
+        );
+
+        registerPatternWeighted("phase2_close3", 2, 0, 12,3.0,
+                castMultiCustomAction(
+                        CastEntry.of(SpellRegistry.CHAIN_LIGHTNING_SPELL.get(), 2, 40, 1)
+                ),
+                waitAction(20)
+        );
+
 
         // ---- フェーズ3 (体力40%〜60%) ----
         registerPattern("phase3_close", 3, 0, 10,
                 castMultiCustomAction(
-                        CastEntry.of(ModSpells.POLYCHROMATIC_LANCE.get(), 5, 8, 7)
+                        CastEntry.of(ModSpells.POLYCHROMATIC_LANCE.get(), 5, 0, 7)
                 ),
                 waitAction(15)
         );
@@ -308,11 +350,15 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
                 waitAction(30)
         );
 
+        registerPattern("phase3_close2", 3, 0, 10,
+                castAndWaitAction(ModSpells.SEVEN_COLORED_CAGE.get(), 10),
+                waitAction(100)
+        );
+
         // ---- フェーズ4 (体力20%〜40%) ----
         registerPattern("phase4_all", 4, 0, 30,
                 castMultiCustomAction(
                         CastEntry.of(ModSpells.POLYCHROMATIC_LANCE.get(), 3, 6, 8),
-                        CastEntry.of(ModSpells.POLYCHROMATIC_BEAM.get(), 3, 6, 8),
                         CastEntry.of(SpellRegistry.BLACK_HOLE_SPELL.get(), 5, 10, 8)
                 ),
                 waitAction(15)
@@ -603,6 +649,19 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
                         currentCastingSpellName = entry.spell.getDisplayName(player).getString();
                         displayTimer = castTime + 10;
                         castSpellSafely(entry.spell, level);
+
+                        // ⭐ customCastTimeが明示的に指定されている場合、
+                        //   initiateCastSpell()が内部で設定した詠唱時間(castDuration)を
+                        //   このtick数で上書きする。LONG/INSTANT型は詠唱時間が0になった
+                        //   瞬間にonCast(実際の効果)が呼ばれるため、cancelCast()で早期に
+                        //   キャンセルするのではなく、詠唱時間そのものを短縮することで
+                        //   効果を正常に発動させたまま、待ち時間だけ短くする。
+                        if (entry.customCastTime > 0 && this.isCasting()) {
+                            MagicData magicData = this.getMagicData();
+                            magicData.initiateCast(entry.spell, level, entry.customCastTime,
+                                    CastSource.MOB, SpellSelectionManager.MAINHAND);
+                        }
+
                         waitingForCastComplete = true;
                         return false;
                     } else {
@@ -869,7 +928,8 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
     private void castSpellSafely(AbstractSpell spell, int level) {
         if (spell == null) return;
         if (EXCLUDED_SPELLS.contains(spell.getClass().getSimpleName())) return;
-        this.initiateCastSpell(spell, Math.min(level, spell.getMaxLevel()));
+        // ⭐ パターンで指定したlevelをそのまま使う(spell.getMaxLevel()による頭打ちは行わない)
+        this.initiateCastSpell(spell, level);
     }
 
     // ============================================================
