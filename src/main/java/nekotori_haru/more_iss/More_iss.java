@@ -5,6 +5,7 @@ import nekotori_haru.more_iss.blockentity.ArcaneCraftingTableBlockEntity;
 import nekotori_haru.more_iss.client.ArcaneCraftingScreen;
 import nekotori_haru.more_iss.client.model.GlacialExecution;
 import nekotori_haru.more_iss.client.renderer.*;
+import nekotori_haru.more_iss.registry.MoreIssConfig;
 import nekotori_haru.more_iss.entity.EternalWizardEntity;
 import nekotori_haru.more_iss.event.FrostArmorDamageEventHandler;
 import nekotori_haru.more_iss.menu.ArcaneCraftingMenu;
@@ -72,14 +73,15 @@ public class More_iss {
         modEventBus.addListener(this::clientSetup);
         modEventBus.addListener(this::registerRenderers);
         modEventBus.addListener(this::registerLayerDefinitions);
-
-        // ⭐ 属性登録イベント（EternalWizardEntity 用）
         modEventBus.addListener(this::registerAttributes);
 
         DisintegrationState.init();
         DisintegrationTargetManager.init();
 
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new FrostArmorDamageEventHandler());
+
+        // ⭐ コンフィグ登録
+        MoreIssConfig.register();
     }
 
     // ───────────── 共通セットアップ ─────────────
@@ -122,9 +124,7 @@ public class More_iss {
         event.registerLayerDefinition(GlacialExecution.LAYER_LOCATION, GlacialExecution::createBodyLayer);
     }
 
-    // ⭐ 属性登録メソッド（これが EternalWizardEntity 召喚に必須！）
-
-
+    // ⭐ 属性登録（EternalWizardEntity 召喚に必須）
     private void registerAttributes(EntityAttributeCreationEvent event) {
         event.put(ModEntities.ETERNAL_WIZARD.get(), EternalWizardEntity.prepareAttributes().build());
         LOGGER.info("EternalWizardEntity attributes registered successfully!");

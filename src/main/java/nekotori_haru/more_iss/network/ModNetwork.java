@@ -31,5 +31,12 @@ public class ModNetwork {
                 .encoder(PacketCraftComplete::toBytes)
                 .consumerMainThread(PacketCraftComplete::handle)
                 .add();
+
+        // ⭕ 追加：ボスバー進捗同期パケット (サーバー -> クライアント)
+        CHANNEL.messageBuilder(PacketBossBarSync.class, packetId++, NetworkDirection.PLAY_TO_CLIENT)
+                .decoder(PacketBossBarSync::new)
+                .encoder(PacketBossBarSync::toBytes)
+                .consumerMainThread(PacketBossBarSync::handle)
+                .add();
     }
 }

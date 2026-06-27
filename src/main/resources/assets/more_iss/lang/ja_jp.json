@@ -189,7 +189,12 @@
   "spell.more_iss.starlight.guide": "空中に浮遊する星を複数ばら撒き、一定時間後に星が爆発するレジェンダリー魔法",
   "entity.more_iss.star": "星",
 
-  "ui.more_iss.oblivion.blocked": "忘却の彼方の効果により魔法を遮断された"
+  "ui.more_iss.oblivion.blocked": "忘却の彼方の効果により魔法を遮断された",
 
+  "item.more_iss.eternal_halo": ":_M久遠の光輪",
+  "item.more_iss.eternal_robe": ":_M久遠のローブ",
+  "item.more_iss.eternal_leggings": ":_M久遠のレギンス",
+  "item.more_iss.eternal_boots": ":_M久遠のブーツ",
+  "entity.more_iss.eternal_wizard": ":_M久遠の魔術師"
 }
 

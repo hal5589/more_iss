@@ -15,9 +15,12 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -29,11 +32,16 @@ import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.network.PacketDistributor;
 
 import java.util.*;
 
+import nekotori_haru.more_iss.network.ModNetwork;
+import nekotori_haru.more_iss.network.PacketBossBarSync;
+import nekotori_haru.more_iss.registry.ModItems;
 import nekotori_haru.more_iss.registry.ModSpells;
 
 public class EternalWizardEntity extends AbstractSpellCastingMob implements Enemy {
@@ -44,6 +52,7 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
     private static final double MOVEMENT_SPEED = 0.45;
 
     private static final int DEFAULT_MULTI_CAST_GAP = 6;
+    private static final double BOSS_BAR_SYNC_RADIUS = 96.0;
 
     // ========== 行動パターン管理 ==========
     private ActionPattern currentPattern;
@@ -53,18 +62,18 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
     private int phaseInterval = 20;
     private int patternCooldown = 0;
     private boolean waitingForCastComplete = false;
-    private boolean pendingAdvance = false; // ⭐ actionTimer消化後にcurrentActionIndexを進めるフラグ
+    private boolean pendingAdvance = false;
 
     private int multiCastStep = 0;
     private int currentSpellCount = 1;
     private boolean isMoving = false;
     private int patternCheckCounter = 0;
 
-    // ⭐ 表示用
+    // 表示用
     private String currentCastingSpellName = "";
     private int displayTimer = 0;
 
-    // ⭐ 周回移動用
+    // 周回移動用
     private double orbitAngle = 0;
     private boolean isOrbiting = false;
 
@@ -94,6 +103,20 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
         initPatterns();
         updatePhaseInterval();
         selectRandomPattern();
+
+        if (!level.isClientSide) {
+            this.setItemSlot(EquipmentSlot.HEAD, new ItemStack(ModItems.ETERNAL_HALO.get()));
+            this.setDropChance(EquipmentSlot.HEAD, 1.0F);
+
+            this.setItemSlot(EquipmentSlot.CHEST, new ItemStack(ModItems.ETERNAL_ROBE.get()));
+            this.setDropChance(EquipmentSlot.CHEST, 1.0F);
+
+            this.setItemSlot(EquipmentSlot.LEGS, new ItemStack(ModItems.ETERNAL_LEGGINGS.get()));
+            this.setDropChance(EquipmentSlot.LEGS, 1.0F);
+
+            this.setItemSlot(EquipmentSlot.FEET, new ItemStack(ModItems.ETERNAL_BOOTS.get()));
+            this.setDropChance(EquipmentSlot.FEET, 1.0F);
+        }
     }
 
     // ============================================================
@@ -168,55 +191,71 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
 
     public static class CastEntry {
         public final AbstractSpell spell;
+        public final int beforeDelay;
         public final int delayAfter;
         public final int customCastTime;
         public final int level;
+        public boolean beforeDelayScheduled;
 
-        public CastEntry(AbstractSpell spell, int delayAfter, int customCastTime, int level) {
+        public CastEntry(AbstractSpell spell, int beforeDelay, int delayAfter, int customCastTime, int level) {
             this.spell = spell;
+            this.beforeDelay = beforeDelay;
             this.delayAfter = delayAfter;
             this.customCastTime = customCastTime;
             this.level = level;
+            this.beforeDelayScheduled = false;
+        }
+
+        public CastEntry(AbstractSpell spell, int delayAfter, int customCastTime, int level) {
+            this(spell, 0, delayAfter, customCastTime, level);
         }
 
         public CastEntry(AbstractSpell spell, int delayAfter, int customCastTime) {
-            this(spell, delayAfter, customCastTime, 0);
+            this(spell, 0, delayAfter, customCastTime, 0);
         }
 
         public CastEntry(AbstractSpell spell, int delayAfter) {
-            this(spell, delayAfter, 0, 0);
+            this(spell, 0, delayAfter, 0, 0);
         }
 
         public CastEntry(AbstractSpell spell) {
-            this(spell, 0, 0, 0);
+            this(spell, 0, 0, 0, 0);
         }
 
         public static CastEntry of(AbstractSpell spell) {
-            return new CastEntry(spell, 0, 0, 0);
+            return new CastEntry(spell, 0, 0, 0, 0);
         }
 
         public static CastEntry of(AbstractSpell spell, int delayAfter) {
-            return new CastEntry(spell, delayAfter, 0, 0);
+            return new CastEntry(spell, 0, delayAfter, 0, 0);
         }
 
         public static CastEntry of(AbstractSpell spell, int delayAfter, int customCastTime) {
-            return new CastEntry(spell, delayAfter, customCastTime, 0);
+            return new CastEntry(spell, 0, delayAfter, customCastTime, 0);
         }
 
         public static CastEntry of(AbstractSpell spell, int delayAfter, int customCastTime, int level) {
-            return new CastEntry(spell, delayAfter, customCastTime, level);
+            return new CastEntry(spell, 0, delayAfter, customCastTime, level);
+        }
+
+        public static CastEntry of(AbstractSpell spell, int beforeDelay, int delayAfter, int customCastTime, int level) {
+            return new CastEntry(spell, beforeDelay, delayAfter, customCastTime, level);
         }
 
         public static CastEntry of(AbstractSpell spell, float delaySeconds) {
-            return new CastEntry(spell, (int)(delaySeconds * 20), 0, 0);
+            return new CastEntry(spell, 0, (int)(delaySeconds * 20), 0, 0);
         }
 
         public static CastEntry of(AbstractSpell spell, float delaySeconds, float castSeconds) {
-            return new CastEntry(spell, (int)(delaySeconds * 20), (int)(castSeconds * 20), 0);
+            return new CastEntry(spell, 0, (int)(delaySeconds * 20), (int)(castSeconds * 20), 0);
         }
 
         public static CastEntry of(AbstractSpell spell, float delaySeconds, float castSeconds, int level) {
-            return new CastEntry(spell, (int)(delaySeconds * 20), (int)(castSeconds * 20), level);
+            return new CastEntry(spell, 0, (int)(delaySeconds * 20), (int)(castSeconds * 20), level);
+        }
+
+        public static CastEntry of(AbstractSpell spell, float beforeSeconds, float delaySeconds, float castSeconds, int level) {
+            return new CastEntry(spell, (int)(beforeSeconds * 20), (int)(delaySeconds * 20), (int)(castSeconds * 20), level);
         }
 
         public int getCastTime() {
@@ -233,11 +272,6 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
     // ============================================================
 
     private void initPatterns() {
-        // ⭐ 発動確率の係数(weight)を指定したい場合は registerPatternWeighted を使う
-        // 例: registerPatternWeighted("name", phase, minDist, maxDist, 2.0, actions...)
-        //   → 同じ抽選グループ内でweight=1のパターンより2倍選ばれやすくなる
-        //   （weightを省略した registerPattern は常に weight=1.0 として扱われる）
-
         // ---- フェーズ1 (体力80%以上) ----
         registerPatternWeighted("phase1_close", 1, 0, 8, 4.0,
                 castAndWaitAction(SpellRegistry.SHADOW_SLASH.get(), 1),
@@ -249,15 +283,12 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
                         CastEntry.of(SpellRegistry.CONE_OF_COLD_SPELL.get(), 2, 20, 3),
                         CastEntry.of(SpellRegistry.FIRE_BREATH_SPELL.get(), 2, 20, 3),
                         CastEntry.of(SpellRegistry.DRAGON_BREATH_SPELL.get(), 2, 20, 3)
-
                 )
         );
 
         registerPatternWeighted("phase1_close3", 1, 0, 10, 0.3,
                 castAndWaitAction(SpellRegistry.THUNDERSTORM_SPELL.get(), 1)
         );
-
-
 
         registerPatternWeighted("phase1_far", 1, 20, 40, 0.2,
                 castAndWaitAction(ModSpells.METEOR_FALL.get(), 1),
@@ -282,17 +313,15 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
                 waitAction(100)
         );
 
-
         registerPatternWeighted("phase1_mid4", 1, 10, 25, 2.0,
                 castMultiCustomAction(
                         CastEntry.of(ModSpells.ENDER_SHOOTING_STAR.get(), 2, 0, 5)
                 ),
-                waitAction(100
-                )
+                waitAction(100)
         );
 
         // ---- フェーズ2 (体力60%〜80%) ----
-        registerPatternWeighted("phase2_close", 2, 0, 12,1.5,
+        registerPatternWeighted("phase2_close", 2, 0, 12, 1.5,
                 castMultiCustomAction(
                         CastEntry.of(ModSpells.MARK_OF_DETONATION.get(), 2, 0, 1),
                         CastEntry.of(ModSpells.MARK_OF_DETONATION.get(), 2, 0, 1),
@@ -304,50 +333,49 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
                 waitAction(20)
         );
 
-        registerPatternWeighted("phase2_mid", 2, 12, 25,0.2,
+        registerPatternWeighted("phase2_mid", 2, 12, 25, 0.2,
                 castAndWaitAction(ModSpells.HEAVENLY_BLAST.get(), 9),
                 waitAction(130)
         );
 
         registerPatternWeighted("phase2_mid", 2, 12, 25, 1.0,
                 castMultiCustomAction(
-                        CastEntry.of(SpellRegistry.POISON_ARROW_SPELL.get(), 10, 0, 10),
-                        CastEntry.of(SpellRegistry.FIRE_ARROW_SPELL.get(), 10, 0, 10),
-                        CastEntry.of(SpellRegistry.MAGIC_ARROW_SPELL.get(), 10, 0, 10),
-                        CastEntry.of(SpellRegistry.BLOOD_NEEDLES_SPELL.get(), 10, 0, 10)
+                        CastEntry.of(SpellRegistry.POISON_ARROW_SPELL.get(), 10, 1, 10),
+                        CastEntry.of(SpellRegistry.FIRE_ARROW_SPELL.get(), 10, 1, 10),
+                        CastEntry.of(SpellRegistry.MAGIC_ARROW_SPELL.get(), 10, 1, 10),
+                        CastEntry.of(SpellRegistry.BLOOD_NEEDLES_SPELL.get(), 10, 1, 10)
                 ),
                 waitAction(130)
         );
 
-        registerPatternWeighted("phase2_close2", 2, 0, 10, 1.0,
+        registerPatternWeighted("phase2_close2", 2, 0, 10, 2.0,
                 castMultiCustomAction(
-                        CastEntry.of(ModSpells.STARLIGHT.get(), 10,0,10),
-                        CastEntry.of(ModSpells.STARLIGHT.get(), 10,0,10),
-                        CastEntry.of(ModSpells.STARLIGHT.get(), 10,0,10),
-                        CastEntry.of(ModSpells.STARLIGHT.get(), 10,0,10)
+                        CastEntry.of(ModSpells.STARLIGHT.get(), 10, 0, 10),
+                        CastEntry.of(ModSpells.STARLIGHT.get(), 10, 0, 10),
+                        CastEntry.of(ModSpells.STARLIGHT.get(), 10, 0, 10),
+                        CastEntry.of(ModSpells.STARLIGHT.get(), 10, 0, 10)
                 ),
                 waitAction(40)
         );
 
-        registerPatternWeighted("phase2_close3", 2, 0, 12,3.0,
+        registerPatternWeighted("phase2_close3", 2, 0, 12, 5.0,
                 castMultiCustomAction(
                         CastEntry.of(SpellRegistry.CHAIN_LIGHTNING_SPELL.get(), 2, 40, 1)
                 ),
                 waitAction(20)
         );
 
-
         // ---- フェーズ3 (体力40%〜60%) ----
         registerPattern("phase3_close", 3, 0, 10,
                 castMultiCustomAction(
                         CastEntry.of(ModSpells.POLYCHROMATIC_LANCE.get(), 5, 0, 7)
                 ),
-                waitAction(15)
+                waitAction(80)
         );
 
         registerPattern("phase3_mid", 3, 10, 20,
                 castAndWaitAction(ModSpells.ABSOLUTE_ZERO.get(), 9),
-                waitAction(30)
+                waitAction(100)
         );
 
         registerPattern("phase3_close2", 3, 0, 10,
@@ -358,10 +386,16 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
         // ---- フェーズ4 (体力20%〜40%) ----
         registerPattern("phase4_all", 4, 0, 30,
                 castMultiCustomAction(
-                        CastEntry.of(ModSpells.POLYCHROMATIC_LANCE.get(), 3, 6, 8),
-                        CastEntry.of(SpellRegistry.BLACK_HOLE_SPELL.get(), 5, 10, 8)
+                        CastEntry.of(SpellRegistry.BLACK_HOLE_SPELL.get(), 5, 10, 8),
+                        CastEntry.of(ModSpells.POLYCHROMATIC_LANCE.get(), 1, 1, 8),
+                        CastEntry.of(ModSpells.POLYCHROMATIC_LANCE.get(), 1, 1, 8),
+                        CastEntry.of(ModSpells.POLYCHROMATIC_LANCE.get(), 1, 1, 8),
+                        CastEntry.of(ModSpells.MARK_OF_DETONATION.get(), 2, 0, 1),
+                        CastEntry.of(ModSpells.MARK_OF_DETONATION.get(), 2, 0, 1),
+                        CastEntry.of(ModSpells.MARK_OF_DETONATION.get(), 2, 0, 1),
+                        CastEntry.of(SpellRegistry.STARFALL_SPELL.get(), 2, 40, 5)
                 ),
-                waitAction(15)
+                waitAction(150)
         );
 
         // ---- フェーズ5 (体力20%未満) ----
@@ -370,13 +404,12 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
                         CastEntry.of(ModSpells.STARLIGHT.get(), 2, 5, 9),
                         CastEntry.of(ModSpells.POLYCHROMATIC_LANCE.get(), 2, 5, 9)
                 ),
-                waitAction(10)
+                waitAction(50)
         );
 
         registerPattern("phase5_mid", 5, 10, 25,
-                castAndWaitAction(ModSpells.HEAVENLY_BLAST.get(), 10),
-                castDurationAction(20, ModSpells.FUNNEL.get(), 9),
-                waitAction(30)
+                castDurationAction(20, ModSpells.FUNNEL.get(), 4),
+                waitAction(100)
         );
     }
 
@@ -396,8 +429,6 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
         registerPattern(name, phase, -1, -1, actions);
     }
 
-    // ⭐ 発動確率の係数(weight)を指定して登録する版
-    // 例: weight=1,1,2 のパターンが同じ抽選グループにいる場合 → 25%, 25%, 50%
     private void registerPatternWeighted(String name, int phase, double minDist, double maxDist, double weight, PatternAction... actions) {
         ActionPattern pattern = new ActionPattern(name, phase, minDist, maxDist, weight, actions);
         allPatterns.add(pattern);
@@ -413,10 +444,6 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
         return 1;
     }
 
-    /**
-     * weight（係数）に応じた重み付き抽選を行う。
-     * 例: 候補のweightが [1, 1, 2] の場合 → それぞれ 25%, 25%, 50% の確率で選ばれる。
-     */
     private ActionPattern pickWeighted(List<ActionPattern> candidates) {
         if (candidates.size() == 1) return candidates.get(0);
 
@@ -426,7 +453,6 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
         }
 
         if (totalWeight <= 0) {
-            // 不正な重み合計の場合は均等抽選にフォールバック
             return candidates.get(RANDOM.nextInt(candidates.size()));
         }
 
@@ -439,7 +465,6 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
             }
         }
 
-        // 浮動小数誤差で漏れた場合のフォールバック
         return candidates.get(candidates.size() - 1);
     }
 
@@ -472,6 +497,15 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
         patternCooldown = 0;
         waitingForCastComplete = false;
         patternCheckCounter = 0;
+
+        // 選択されたパターンの全 CastEntry の beforeDelayScheduled をリセット
+        for (PatternAction action : selected.actions) {
+            if (action.castEntries != null) {
+                for (CastEntry entry : action.castEntries) {
+                    entry.beforeDelayScheduled = false;
+                }
+            }
+        }
 
         System.out.println("[EternalWizard] Pattern changed to: " + currentPatternName + " (phase=" + currentPhase + ", dist=" + dist + ", weight=" + selected.weight + ")");
 
@@ -543,11 +577,10 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
 
                 if (currentAction != null) {
                     if (currentAction.type == PatternActionType.CAST_MULTI_CUSTOM) {
-                        CastEntry justCast = (multiCastStep < currentAction.castEntries.size())
-                                ? currentAction.castEntries.get(multiCastStep) : null;
-                        multiCastStep++;
-                        hasMoreEntries = multiCastStep < currentAction.castEntries.size();
-                        if (justCast != null) nextDelay = Math.max(1, justCast.delayAfter);
+                        if (multiCastStep < currentAction.castEntries.size()) {
+                            multiCastStep++;
+                            hasMoreEntries = multiCastStep < currentAction.castEntries.size();
+                        }
                     } else if (currentAction.type == PatternActionType.CAST_MULTI_INSTANT
                             || currentAction.type == PatternActionType.CAST_MULTI_INTERVAL) {
                         multiCastStep++;
@@ -560,11 +593,9 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
                 }
 
                 if (!hasMoreEntries) {
-                    // このPatternAction内のエントリーを全て消化した → 次のPatternActionへ
                     currentActionIndex++;
                     multiCastStep = 0;
                 } else {
-                    // 同じPatternAction内の次のエントリーへ。delayAfter/interval分だけ間を空ける
                     actionTimer = nextDelay;
                 }
             }
@@ -591,8 +622,6 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
         boolean finished = executeAction(action);
         if (finished) {
             if (action.duration > 0) {
-                // ⭐ durationの間は現在のアクション位置を保持したまま待機し、
-                //    待機が完全に終わってから次のアクションへ進む
                 actionTimer = action.duration;
                 pendingAdvance = true;
             } else {
@@ -608,7 +637,6 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
                 return true;
 
             case MOVE:
-                // ⭐ 移動アクションは周回移動に変更
                 doOrbitMove();
                 return true;
 
@@ -641,6 +669,21 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
                 }
 
                 CastEntry entry = action.castEntries.get(multiCastStep);
+                if (entry == null) return true;
+
+                if (entry.beforeDelay > 0 && !entry.beforeDelayScheduled) {
+                    entry.beforeDelayScheduled = true;
+                    actionTimer = entry.beforeDelay;
+                    Player player = this.getTarget() instanceof Player ? (Player) this.getTarget() : null;
+                    currentCastingSpellName = entry.spell.getDisplayName(player).getString();
+                    displayTimer = entry.beforeDelay + entry.getCastTime() + 10;
+                    return false;
+                }
+
+                if (entry.beforeDelay > 0 && entry.beforeDelayScheduled && actionTimer > 0) {
+                    return false;
+                }
+
                 if (entry.spell != null) {
                     int level = entry.getLevel();
                     int castTime = entry.getCastTime();
@@ -650,12 +693,6 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
                         displayTimer = castTime + 10;
                         castSpellSafely(entry.spell, level);
 
-                        // ⭐ customCastTimeが明示的に指定されている場合、
-                        //   initiateCastSpell()が内部で設定した詠唱時間(castDuration)を
-                        //   このtick数で上書きする。LONG/INSTANT型は詠唱時間が0になった
-                        //   瞬間にonCast(実際の効果)が呼ばれるため、cancelCast()で早期に
-                        //   キャンセルするのではなく、詠唱時間そのものを短縮することで
-                        //   効果を正常に発動させたまま、待ち時間だけ短くする。
                         if (entry.customCastTime > 0 && this.isCasting()) {
                             MagicData magicData = this.getMagicData();
                             magicData.initiateCast(entry.spell, level, entry.customCastTime,
@@ -666,19 +703,18 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
                         return false;
                     } else {
                         castSpellSafely(entry.spell, level);
+                        multiCastStep++;
+                        if (entry.delayAfter > 0) {
+                            actionTimer = entry.delayAfter;
+                            return false;
+                        } else {
+                            return true;
+                        }
                     }
-                    System.out.println("[EternalWizard] Casting: " + entry.spell.getClass().getSimpleName() + " (Lv." + level + ")");
                 }
 
                 multiCastStep++;
-
-                if (multiCastStep >= action.castEntries.size()) {
-                    multiCastStep = 0;
-                    return true;
-                }
-
-                actionTimer = Math.max(1, entry.delayAfter);
-                return false;
+                return true;
             }
 
             case CAST_MULTI_INSTANT:
@@ -805,37 +841,25 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
         LivingEntity target = this.getTarget();
         if (target == null) return;
 
-        // 1. 周回角度を更新（体力が減るほど速くなる）
         double healthRatio = this.getHealth() / this.getMaxHealth();
-        double orbitSpeed = 0.025 + (1.0 - healthRatio) * 0.045; // 0.025〜0.07（高速化）
+        double orbitSpeed = 0.025 + (1.0 - healthRatio) * 0.045;
         orbitAngle += orbitSpeed;
 
-        // 2. 周回半径：現在のパターンに距離設定があればその範囲内、なければデフォルト(4〜5.5)
         double orbitRadius = computeOrbitRadius();
 
-        // 3. ターゲットの周囲の位置を計算
         double x = target.getX() + Math.cos(orbitAngle) * orbitRadius;
         double z = target.getZ() + Math.sin(orbitAngle) * orbitRadius;
 
-        // 4. Y座標：地面から5ブロック、かつターゲットより低すぎないように
         double groundY = getGroundLevel(x, z);
         double y = groundY + FLOAT_HEIGHT;
         if (y < target.getY() + 2.0) {
             y = target.getY() + 3.0;
         }
 
-        // 5. 移動目標を設定
         this.moveControl.setWantedPosition(x, y, z, MOVEMENT_SPEED);
         this.setMoving(true);
-
-        // 6. デバッグ用（必要に応じて削除）
-        // System.out.println("[EternalWizard] Orbit: angle=" + orbitAngle + ", radius=" + orbitRadius);
     }
 
-    /**
-     * 現在のパターンに minDist/maxDist が設定されている場合、その範囲の中心を基準に
-     * ±15%ほど揺らした半径を返す。設定がない場合は従来のデフォルト挙動(4.0〜5.5)。
-     */
     private double computeOrbitRadius() {
         double baseRadius;
         double wobble;
@@ -844,17 +868,14 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
             double center = (currentPattern.minDist + currentPattern.maxDist) / 2.0;
             double halfRange = (currentPattern.maxDist - currentPattern.minDist) / 2.0;
             baseRadius = center;
-            wobble = Math.min(halfRange * 0.8, halfRange); // 範囲を超えないよう余裕を持たせる
+            wobble = Math.min(halfRange * 0.8, halfRange);
         } else if (currentPattern != null && currentPattern.minDist > 0) {
-            // 下限のみ指定：下限より少し外側を周回
             baseRadius = currentPattern.minDist + 1.5;
             wobble = 1.0;
         } else if (currentPattern != null && currentPattern.maxDist > 0) {
-            // 上限のみ指定：上限より少し内側を周回
             baseRadius = currentPattern.maxDist - 1.5;
             wobble = 1.0;
         } else {
-            // 距離指定なし：従来のデフォルト
             baseRadius = 4.75;
             wobble = 1.5;
         }
@@ -894,11 +915,9 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
     // ============================================================
 
     private void maintainHeight() {
-        // ⭐ 常に地面から5ブロックの高さを維持
         double groundY = getGroundLevel(this.getX(), this.getZ());
         double targetY = groundY + FLOAT_HEIGHT;
 
-        // ターゲットがいる場合はターゲットの高さも考慮
         LivingEntity target = this.getTarget();
         if (target != null) {
             if (targetY < target.getY() + 2.0) {
@@ -909,7 +928,6 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
         double currentY = this.getY();
         double diff = targetY - currentY;
 
-        // 急激な移動を防ぐため、1tickあたり最大0.2ブロックまで移動
         if (Math.abs(diff) > 0.1) {
             double moveSpeed = Math.min(Math.abs(diff), 0.2);
             double newY = currentY + Math.signum(diff) * moveSpeed;
@@ -928,7 +946,6 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
     private void castSpellSafely(AbstractSpell spell, int level) {
         if (spell == null) return;
         if (EXCLUDED_SPELLS.contains(spell.getClass().getSimpleName())) return;
-        // ⭐ パターンで指定したlevelをそのまま使う(spell.getMaxLevel()による頭打ちは行わない)
         this.initiateCastSpell(spell, level);
     }
 
@@ -1008,9 +1025,41 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
             this.setTarget(attacker);
         }
         boolean result = super.hurt(pSource, pAmount);
+
+        // ⭐ 距離減衰なしで Wither の被ダメージ音を全プレイヤーに再生
+        if (!level().isClientSide) {
+            this.level().playSound(null, this.getX(), this.getY(), this.getZ(),
+                    SoundEvents.WITHER_HURT, SoundSource.HOSTILE, 2.0f, 1.0f);
+        }
+
         updatePhaseInterval();
         selectPatternByPhase();
+        if (!level().isClientSide) {
+            sendBossBarSync(true);
+        }
         return result;
+    }
+
+    // ============================================================
+    //  ★★★ ボスバー（虹色グラデーション）同期 ★★★
+    // ============================================================
+
+    private void sendBossBarSync(boolean isHit) {
+        float progress = this.getMaxHealth() > 0
+                ? Mth.clamp(this.getHealth() / this.getMaxHealth(), 0.0f, 1.0f)
+                : 0.0f;
+
+        ModNetwork.CHANNEL.send(
+                PacketDistributor.NEAR.with(() -> new PacketDistributor.TargetPoint(
+                        this.getX(), this.getY(), this.getZ(),
+                        BOSS_BAR_SYNC_RADIUS, this.level().dimension()
+                )),
+                new PacketBossBarSync(this.getId(), progress, this.getDisplayName(), isHit)
+        );
+    }
+
+    private void sendBossBarSync() {
+        sendBossBarSync(false);
     }
 
     // ============================================================
@@ -1024,40 +1073,36 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
         this.setNoGravity(true);
 
         if (!level().isClientSide) {
-            // ----- 1. ターゲットがいる場合のみ動作 -----
             if (this.getTarget() == null || !this.getTarget().isAlive()) {
                 findNearestPlayer();
-                // ターゲットがいない場合は何もしない
                 if (this.getTarget() == null) {
+                    if (this.tickCount % 4 == 0) {
+                        sendBossBarSync(false);
+                    }
                     return;
                 }
             }
 
-            // ----- 2. 高さ維持（常時） -----
             maintainHeight();
-
-            // ----- 2.5 周回移動（常時・パターン内容に関わらず継続）-----
             doOrbitMove();
 
-            // ----- 3. プレイヤーを向く -----
             LivingEntity target = this.getTarget();
             if (target != null) {
                 faceTarget(target);
             }
 
-            // ----- 4. パターン実行 -----
             executePattern();
-
-            // ----- 5. 表示更新 -----
             updateDisplay();
 
-            // ----- 6. フェーズ更新（定期） -----
             if (this.tickCount % 20 == 0) {
                 updatePhaseInterval();
             }
+
+            if (this.tickCount % 4 == 0) {
+                sendBossBarSync(false);
+            }
         }
 
-        // ----- 7. パーティクル（常時） -----
         if (!level().isClientSide && this.tickCount % 5 == 0) {
             ((ServerLevel) level()).sendParticles(
                     ParticleTypes.END_ROD,
@@ -1139,7 +1184,22 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
 
     @Override
     protected SoundEvent getHurtSound(DamageSource pDamageSource) {
+        // デフォルトの被ダメージ音は Wither 音で上書きするため、必要に応じて null または空の音を返す
         return SoundRegistry.ENDER_CAST.get();
+    }
+
+    @Override
+    public void die(DamageSource pDamageSource) {
+        super.die(pDamageSource);
+        if (!level().isClientSide) {
+            ModNetwork.CHANNEL.send(
+                    PacketDistributor.NEAR.with(() -> new PacketDistributor.TargetPoint(
+                            this.getX(), this.getY(), this.getZ(),
+                            BOSS_BAR_SYNC_RADIUS, this.level().dimension()
+                    )),
+                    new PacketBossBarSync(this.getId(), 0.0f, this.getDisplayName(), false)
+            );
+        }
     }
 
     @Override
@@ -1240,8 +1300,8 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
     // ============================================================
 
     static class FlyingMoveControl extends MoveControl {
-        private static final double CLOSING_SPEED_MULT = 1.6;   // 接近時は速く
-        private static final double RETREATING_SPEED_MULT = 0.5; // 離脱時は遅く
+        private static final double CLOSING_SPEED_MULT = 1.6;
+        private static final double RETREATING_SPEED_MULT = 0.5;
 
         public FlyingMoveControl(Mob mob) {
             super(mob);
@@ -1263,7 +1323,6 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
                     return;
                 }
 
-                // ⭐ ターゲット（プレイヤー）との距離が縮まる移動か、広がる移動かを判定
                 double speedMult = 1.0;
                 LivingEntity target = this.mob.getTarget();
                 if (target != null) {
@@ -1272,9 +1331,9 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
                     double wantedDistToTarget = wantedPos.distanceTo(target.position());
 
                     if (wantedDistToTarget < currentDistToTarget - 0.05) {
-                        speedMult = CLOSING_SPEED_MULT;    // 近づこうとしている
+                        speedMult = CLOSING_SPEED_MULT;
                     } else if (wantedDistToTarget > currentDistToTarget + 0.05) {
-                        speedMult = RETREATING_SPEED_MULT; // 離れようとしている
+                        speedMult = RETREATING_SPEED_MULT;
                     }
                 }
 

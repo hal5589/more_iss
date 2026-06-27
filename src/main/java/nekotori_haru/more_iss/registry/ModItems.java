@@ -5,9 +5,11 @@ import io.redspace.ironsspellbooks.util.ItemPropertiesHelper;
 import nekotori_haru.more_iss.More_iss;
 import nekotori_haru.more_iss.item.RingOfManaCycleItem;
 import nekotori_haru.more_iss.item.SpellbookOfConcentration;
+import nekotori_haru.more_iss.item.armor.EternalArmorItem;
 import nekotori_haru.more_iss.item.ringofsynthesis.RingOfSynthesisItem;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Rarity;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -54,6 +56,23 @@ public class ModItems {
 
     public static final RegistryObject<Item> SPELLBOOK_OF_CONCENTRATION = ITEMS.register("spellbook_of_concentration",
             SpellbookOfConcentration::new);
+
+    // ⭐ 不可壊（fireResistant）を復活
+    public static final RegistryObject<ArmorItem> ETERNAL_HALO = ITEMS.register("eternal_halo",
+            () -> new EternalArmorItem(ModArmorMaterials.ETERNAL, ArmorItem.Type.HELMET,
+                    new Item.Properties().stacksTo(1).fireResistant()));
+
+    public static final RegistryObject<ArmorItem> ETERNAL_ROBE = ITEMS.register("eternal_robe",
+            () -> new EternalArmorItem(ModArmorMaterials.ETERNAL, ArmorItem.Type.CHESTPLATE,
+                    new Item.Properties().stacksTo(1).fireResistant()));
+
+    public static final RegistryObject<ArmorItem> ETERNAL_LEGGINGS = ITEMS.register("eternal_leggings",
+            () -> new EternalArmorItem(ModArmorMaterials.ETERNAL, ArmorItem.Type.LEGGINGS,
+                    new Item.Properties().stacksTo(1).fireResistant()));
+
+    public static final RegistryObject<ArmorItem> ETERNAL_BOOTS = ITEMS.register("eternal_boots",
+            () -> new EternalArmorItem(ModArmorMaterials.ETERNAL, ArmorItem.Type.BOOTS,
+                    new Item.Properties().stacksTo(1).fireResistant()));
 
     public static void register(IEventBus bus) {
         ITEMS.register(bus);
