@@ -87,8 +87,6 @@ minecraft {
             // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
             property 'forge.logging.console.level', 'debug'
 
-            // 💡 追記：外部ModのMixinプラグインが開発環境でエラーを起こすのを防止する
-            property 'mixin.env.disableRefMap', 'true'
             jvmArgs "-Dmixin.debug.export=true"
 
             mods {
@@ -130,8 +128,27 @@ minecraft {
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 mixin {
-    add sourceSets.main, "more_iss.refmap.json"
     config "more_iss.mixins.json"
+}
+
+// 💡 mixingradle(0.7-SNAPSHOT) は AP が生成する refmap の実ファイル名を
+//    "compileJava-refmap.json" のまま build/tmp/compileJava/ に出力し、
+//    本来 "more_iss.refmap.json" としてリソースに含める処理を行わない
+//    既知の不具合がある。そのため、add() による自動登録には依存せず、
+//    compileJava 完了後に明示的にコピーするタスクで一本化する。
+tasks.register('copyMixinRefmap', Copy) {
+    dependsOn 'compileJava'
+    from("${buildDir}/tmp/compileJava/compileJava-refmap.json")
+    into("${buildDir}/resources/main")
+    rename { "more_iss.refmap.json" }
+}
+
+tasks.named('processResources').configure {
+    dependsOn 'copyMixinRefmap'
+}
+
+tasks.named('classes').configure {
+    dependsOn 'copyMixinRefmap'
 }
 
 repositories {
@@ -175,6 +192,8 @@ dependencies {
 }
 
 tasks.named('processResources', ProcessResources).configure {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
     var replaceProperties = [minecraft_version   : minecraft_version, minecraft_version_range: minecraft_version_range,
                              forge_version       : forge_version, forge_version_range: forge_version_range,
                              loader_version_range: loader_version_range,
@@ -189,6 +208,8 @@ tasks.named('processResources', ProcessResources).configure {
 }
 
 tasks.named('jar', Jar).configure {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
     manifest {
         attributes(["Specification-Title"     : mod_id,
                     "Specification-Vendor"    : mod_authors,
