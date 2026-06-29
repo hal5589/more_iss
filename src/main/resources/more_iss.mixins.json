@@ -9,7 +9,9 @@
     "LivingEntityMixin",
     "MixinEntity",
     "MixinAbstractSpell",
-    "MixinAbstractSpellCastingMob"
+    "MixinAbstractSpellCastingMob",
+    "SynchedEntityDataAccessor",
+    "SynchedEntityDataMixin"
 
   ],
   "client": [

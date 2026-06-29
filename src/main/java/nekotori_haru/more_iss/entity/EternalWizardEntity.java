@@ -43,6 +43,7 @@ import nekotori_haru.more_iss.network.ModNetwork;
 import nekotori_haru.more_iss.network.PacketBossBarSync;
 import nekotori_haru.more_iss.registry.ModItems;
 import nekotori_haru.more_iss.registry.ModSpells;
+import nekotori_haru.more_iss.registry.MoreIssConfig;
 
 public class EternalWizardEntity extends AbstractSpellCastingMob implements Enemy {
 
@@ -90,6 +91,23 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
     private List<ActionPattern> allPatterns = new ArrayList<>();
     private Map<String, ActionPattern> patternMap = new HashMap<>();
     private String currentPatternName = "";
+
+    // ============================================================
+    //  ★★★ 独自体力管理システム（実体は EternalWizardAsmTransformer） ★★★
+    // ============================================================
+    //
+    // fantasy_ending 等が ASM で LivingEntity#getHealth() の戻り値を
+    // 改造し、SynchedEntityData の独自フィールドに合成値(デルタ)を
+    // 持たせて vanilla の hurt()/setHealth() を経由しないダメージ経路を
+    // 作るケースに対抗するため、EternalWizardEntity 専用の体力管理を
+    // 生ASM(ILaunchPluginService)でクラスロード時に注入する。
+    //
+    // 注意: more_iss$trueHealth / more_iss$trueHealthInitialized という
+    // フィールドは、ここでは宣言しない。
+    // nekotori_haru.more_iss.asm.EternalWizardAsmTransformer が
+    // クラスロード時にバイトコードへ直接追加するため、Javaソース上に
+    // 重複して書くとフィールド競合でクラスロードに失敗する。
+    //
 
     // ============================================================
     //  コンストラクタ
@@ -1058,8 +1076,109 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
         );
     }
 
+    // ============================================================
+    //  ★★★ 独自体力管理: getHealth/setHealth ★★★
+    // ============================================================
+    //
+    // getHealth()/setHealth(float) はソース上では実装しない。
+    // EternalWizardAsmTransformer (ILaunchPluginService) が
+    // クラスロード時に生ASMでこれらのメソッドをバイトコードレベルで
+    // 直接注入する。フィールド more_iss$trueHealth /
+    // more_iss$trueHealthInitialized もTransformer側が追加する。
+    //
+    // (このコメント位置はASM側の実装と対応関係を分かりやすくするために
+    //  残してある。実装内容は EternalWizardAsmTransformer.java を参照。)
+    //
+
     private void sendBossBarSync() {
         sendBossBarSync(false);
+    }
+
+    // ============================================================
+    //  ★★★ 汎用ダメージキャップ（ティッカー方式・保険） ★★★
+    // ============================================================
+    //
+    // getHealth/setHealth の完全差し替え(EternalWizardAsmTransformer)に
+    // より、ほとんどのケースは setHealth() 経由のキャップで解決するはず
+    // だが、SynchedEntityData へ entityData.set(DATA_HEALTH_ID, ...) を
+    // Mixin/ASM等で直接書き込み、setHealth() 自体を完全にバイパスして
+    // くる極端なケースに備えた最終保険として残す。
+    //
+    // more_iss$trueHealth は ASM Transformer がバイトコードレベルで
+    // 追加するフィールドであり、Javaソースからは直接アクセスできない
+    // (コンパイル時にそのフィールドの存在が見えないため)。
+    // そのためリフレクションで読み書きする。
+    //
+    private float lastTickRawHealth = -1.0f;
+
+    private java.lang.reflect.Field more_iss$trueHealthFieldCache;
+
+    private float more_iss$readTrueHealthField() {
+        try {
+            if (more_iss$trueHealthFieldCache == null) {
+                more_iss$trueHealthFieldCache = EternalWizardEntity.class.getDeclaredField("more_iss$trueHealth");
+                more_iss$trueHealthFieldCache.setAccessible(true);
+            }
+            return more_iss$trueHealthFieldCache.getFloat(this);
+        } catch (Throwable t) {
+            return this.getHealth(); // フォールバック
+        }
+    }
+
+    private void more_iss$writeTrueHealthField(float value) {
+        try {
+            if (more_iss$trueHealthFieldCache == null) {
+                more_iss$trueHealthFieldCache = EternalWizardEntity.class.getDeclaredField("more_iss$trueHealth");
+                more_iss$trueHealthFieldCache.setAccessible(true);
+            }
+            more_iss$trueHealthFieldCache.setFloat(this, value);
+        } catch (Throwable t) {
+            // 失敗しても致命的ではない(次回tickでまた同期を試みる)
+        }
+    }
+
+    private void applyGenericDamageCapTick() {
+        float rawHealth = super.getHealth(); // vanilla(SynchedEntityData)の生の値
+
+        if (!MoreIssConfig.isDamageCapEnabled()) {
+            lastTickRawHealth = rawHealth;
+            return;
+        }
+
+        if (lastTickRawHealth < 0.0f) {
+            lastTickRawHealth = rawHealth;
+            return;
+        }
+
+        // 安全策: 死亡確定時はキャップしない。
+        if (rawHealth <= 0.0f || this.isDeadOrDying() || !this.isAlive()) {
+            lastTickRawHealth = rawHealth;
+            more_iss$writeTrueHealthField(rawHealth);
+            return;
+        }
+
+        float cap = MoreIssConfig.getDamageCap();
+        float decrease = lastTickRawHealth - rawHealth;
+
+        if (decrease > cap) {
+            // setHealth() をバイパスした書き込みを検知 → cap基準で
+            // 強制的に再同期する。
+            float corrected = lastTickRawHealth - cap;
+            // ⭐ デバッグログ（必要に応じて削除）
+            // System.out.println("[EternalWizard][TICK] Bypass detected, resynced: " + decrease + " -> " + cap);
+            this.setHealth(corrected); // ASM側のsetHealthを通す
+            rawHealth = super.getHealth();
+        } else {
+            // setHealth() を正しく経由した通常のキャップ済み変化。
+            // more_iss$trueHealth とズレている場合のみ追従させる
+            // (通常は一致するはず)。
+            float trueHealth = more_iss$readTrueHealthField();
+            if (Math.abs(rawHealth - trueHealth) > 0.001f && decrease <= cap) {
+                more_iss$writeTrueHealthField(rawHealth);
+            }
+        }
+
+        lastTickRawHealth = rawHealth;
     }
 
     // ============================================================
@@ -1069,6 +1188,13 @@ public class EternalWizardEntity extends AbstractSpellCastingMob implements Enem
     @Override
     public void tick() {
         super.tick();
+
+        // 汎用ダメージキャップ: super.tick() の直後、
+        // つまりこのティック中に発生したあらゆるダメージ処理が
+        // 確定した後に判定する。
+        if (!level().isClientSide) {
+            applyGenericDamageCapTick();
+        }
 
         this.setNoGravity(true);
 

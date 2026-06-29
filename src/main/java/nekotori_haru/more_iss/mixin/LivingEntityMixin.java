@@ -104,8 +104,6 @@ public abstract class LivingEntityMixin {
         float decrease = currentHealth - newHealth;
 
         if (decrease > cap) {
-            // ⭐ デバッグログ（必要に応じて削除）
-            // System.out.println("[EternalWizard] setHealth decrease capped: " + decrease + " -> " + cap);
             return currentHealth - cap;
         }
 

@@ -3,7 +3,6 @@ package nekotori_haru.more_iss.entity;
 import io.redspace.ironsspellbooks.api.util.Utils;
 import io.redspace.ironsspellbooks.capabilities.magic.MagicManager;
 import io.redspace.ironsspellbooks.util.ParticleHelper;
-import nekotori_haru.more_iss.More_iss;
 import nekotori_haru.more_iss.registry.ModEntities;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
@@ -20,16 +19,34 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraft.resources.ResourceLocation;
+import software.bernie.geckolib.animatable.GeoEntity;
+import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
+import software.bernie.geckolib.core.animation.AnimatableManager;
+import software.bernie.geckolib.core.animation.AnimationController;
+import software.bernie.geckolib.core.object.PlayState;
+import software.bernie.geckolib.util.GeckoLibUtil;
 
 import java.util.List;
 
-public class NapalmBombEntity extends Entity {
+public class NapalmBombEntity extends Entity implements GeoEntity {
 
+    private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
     private LivingEntity owner;
     private float damage = 5.0f;
     private float explosionRadius = 3.0f;
     private int fuseTimer = 0;
     private static final int FUSE_TICKS = 60;
+
+    // ★ レンダリング用：前フレームの速度（着地直前の速度を保存するため）
+    public Vec3 prevMotion = Vec3.ZERO;
+
+    // ★ 着地検出用：前回のtickでの接地状態
+    private boolean prevOnGround = false;
+
+    // ★ 着地時の角度を保存
+    private float savedPitch = 0f;
+    private float savedYaw = 0f;
+    private boolean angleSaved = false;
 
     public NapalmBombEntity(EntityType<?> type, Level level) {
         super(type, level);
@@ -46,22 +63,51 @@ public class NapalmBombEntity extends Entity {
     public void setExplosionRadius(float radius) { this.explosionRadius = radius; }
     public boolean isGrounded() { return fuseTimer > 0; }
 
+    public float getSavedPitch() { return savedPitch; }
+    public float getSavedYaw() { return savedYaw; }
+    public boolean isAngleSaved() { return angleSaved; }
+
     @Override
     public void tick() {
         super.tick();
 
+        // ★ ① まず現在の速度を保存（着地直前の速度として後で使う）
+        prevMotion = this.getDeltaMovement();
+
+        // ② 重力と減速（放物線運動）
         Vec3 motion = this.getDeltaMovement();
         this.setDeltaMovement(motion.x * 0.99, motion.y - 0.04, motion.z * 0.99);
         this.move(MoverType.SELF, this.getDeltaMovement());
 
+        // ★ ③ 着地検出：「今接地した」＝「現在接地している」かつ「前回は接地していなかった」
+        if (this.onGround() && !prevOnGround && !angleSaved) {
+            // 着地直前の速度（prevMotion）を使って角度を計算して保存
+            Vec3 vel = prevMotion;
+            if (vel.lengthSqr() > 0.0001) {
+                float pitch = ((float) (Mth.atan2(vel.horizontalDistance(), vel.y) * (180F / Math.PI)) - 90.0F);
+                float yaw = -((float) (Mth.atan2(vel.z, vel.x) * (180F / Math.PI)) - 90.0F);
+                this.savedPitch = pitch;
+                this.savedYaw = yaw;
+            } else {
+                // 速度がほぼゼロ（めったにない）の場合：現在の向きをそのまま保存
+                this.savedPitch = 0f;
+                this.savedYaw = 0f;
+            }
+            this.angleSaved = true;
+        }
+
+        // ④ 接地中の処理（速度ゼロ、フューズ進行）
         if (this.onGround()) {
             this.setDeltaMovement(Vec3.ZERO);
             fuseTimer++;
         }
 
+        // ★ ⑤ 次フレームのために、今回の接地状態を保存
+        prevOnGround = this.onGround();
+
+        // ----- パーティクル処理（元の処理をそのまま維持） -----
         if (this.level().isClientSide) {
             if (fuseTimer == 0) {
-                // 飛翔中：MagicFireballのtrailParticles移植
                 Vec3 vec3 = this.getDeltaMovement();
                 double d0 = this.getX() - vec3.x;
                 double d1 = this.getY() - vec3.y;
@@ -94,15 +140,18 @@ public class NapalmBombEntity extends Entity {
             }
         }
 
+        // 爆発処理
         if (!this.level().isClientSide && fuseTimer >= FUSE_TICKS) {
             explode();
         }
 
+        // タイムアウト（安全装置）
         if (!this.level().isClientSide && this.tickCount > 200) {
             this.discard();
         }
     }
 
+    // ----- 爆発処理（元の処理をそのまま維持） -----
     private void explode() {
         Level world = this.level();
         if (!(world instanceof ServerLevel serverWorld)) return;
@@ -121,6 +170,7 @@ public class NapalmBombEntity extends Entity {
         AABB boundingBox = this.getBoundingBox().inflate(radius);
         List<LivingEntity> targets = world.getEntitiesOfClass(LivingEntity.class, boundingBox);
 
+        // ノックバック
         for (LivingEntity target : targets) {
             if (target == owner) continue;
             double distance = target.distanceTo(this);
@@ -141,6 +191,7 @@ public class NapalmBombEntity extends Entity {
             }
         }
 
+        // ダメージ＆着火
         for (LivingEntity target : targets) {
             if (target == owner) continue;
             double distance = target.distanceTo(this);
@@ -157,19 +208,17 @@ public class NapalmBombEntity extends Entity {
             }
         }
 
+        // パーティクル＆音
         double x = this.getX();
         double y = this.getY() + 0.15;
         double z = this.getZ();
 
         MagicManager.spawnParticles(serverWorld, ParticleHelper.EMBERS,
                 x, y, z, 50, radius * 0.5, radius * 0.5, radius * 0.5, 0.15D, false);
-
         MagicManager.spawnParticles(serverWorld, ParticleTypes.EXPLOSION,
                 x, y, z, 5, radius * 0.3, radius * 0.3, radius * 0.3, 0.0D, false);
-
         MagicManager.spawnParticles(serverWorld, ParticleTypes.FLAME,
                 x, y, z, 40, radius * 0.4, radius * 0.4, radius * 0.4, 0.1D, false);
-
 
         world.playSound(null, this.getX(), this.getY(), this.getZ(),
                 net.minecraft.sounds.SoundEvents.GENERIC_EXPLODE,
@@ -179,19 +228,33 @@ public class NapalmBombEntity extends Entity {
         this.discard();
     }
 
+    // ----- NBT（角度も保存） -----
     @Override protected void defineSynchedData() {}
-
-    @Override
-    protected void readAdditionalSaveData(CompoundTag tag) {
+    @Override protected void readAdditionalSaveData(CompoundTag tag) {
         this.damage = tag.getFloat("Damage");
         this.explosionRadius = tag.getFloat("ExplosionRadius");
         this.fuseTimer = tag.getInt("FuseTimer");
+        this.savedPitch = tag.getFloat("SavedPitch");
+        this.savedYaw = tag.getFloat("SavedYaw");
+        this.angleSaved = tag.getBoolean("AngleSaved");
     }
-
-    @Override
-    protected void addAdditionalSaveData(CompoundTag tag) {
+    @Override protected void addAdditionalSaveData(CompoundTag tag) {
         tag.putFloat("Damage", this.damage);
         tag.putFloat("ExplosionRadius", this.explosionRadius);
         tag.putInt("FuseTimer", this.fuseTimer);
+        tag.putFloat("SavedPitch", this.savedPitch);
+        tag.putFloat("SavedYaw", this.savedYaw);
+        tag.putBoolean("AngleSaved", this.angleSaved);
+    }
+
+    // ----- GeoEntity 実装 -----
+    @Override
+    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+        controllers.add(new AnimationController<>(this, "dummy", 0, state -> PlayState.STOP));
+    }
+
+    @Override
+    public AnimatableInstanceCache getAnimatableInstanceCache() {
+        return cache;
     }
 }
