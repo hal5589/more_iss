@@ -24,6 +24,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.List;
 
@@ -68,15 +69,19 @@ public class VoidRaySpell extends AbstractSpell {
                 .bbInflation(.15f)
                 .build();
 
+        Vec3 startPos = entity.getEyePosition().subtract(0, 0.15, 0);
+        Vec3 direction = entity.getLookAngle();
+
         // 🌟 射程60に合わせて、何も当たらなかった場合は最大60mまでビームを描画
         double distance = maxRange;
         if (hitResult.getType() == HitResult.Type.ENTITY) {
-            distance = hitResult.getLocation().distanceTo(entity.getEyePosition());
+            distance = hitResult.getLocation().distanceTo(startPos);
         }
 
         if (!level.isClientSide) {
-            BaseBeamVisualEntity visual = new BaseBeamVisualEntity(ModEntities.BASE_BEAM_VISUAL.get(), level, entity, distance, BeamType.VOID);
-            visual.setPos(entity.getX(), entity.getEyeY() - 0.2, entity.getZ());
+            BaseBeamVisualEntity visual = new BaseBeamVisualEntity(
+                    ModEntities.BASE_BEAM_VISUAL.get(), level, entity,
+                    startPos, direction, distance, BeamType.VOID);
             level.addFreshEntity(visual);
         }
 

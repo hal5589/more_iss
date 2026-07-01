@@ -36,7 +36,7 @@ public class BeamWarningEntity extends Entity {
 
     public static final int WARNING_DURATION = 20;
 
-    // ⭐ Iron's Spells の SoundRegistry を使用
+    // Iron's Spells の SoundRegistry を使用
     private static final SoundEvent SOUND_FLAME = SoundRegistry.FIRE_CAST.get();
     private static final SoundEvent SOUND_HOLY = SoundRegistry.HOLY_CAST.get();
     private static final SoundEvent SOUND_SOLAR = SoundRegistry.SUNBEAM_IMPACT.get();
@@ -136,16 +136,16 @@ public class BeamWarningEntity extends Entity {
 
         BeamType beamType = this.getBeamType();
 
-        // ⭐ 属性に応じた音を再生
+        // 属性に応じた音を再生
         playBeamSound(level, startPos, beamType);
 
+        // ★ 修正点：BaseBeamVisualEntity の新しいコンストラクタを使用（方向・開始位置を指定）
         BaseBeamVisualEntity visual = new BaseBeamVisualEntity(
-                ModEntities.BASE_BEAM_VISUAL.get(), level, caster, length, beamType);
-        visual.setPos(startPos.x, startPos.y, startPos.z);
-        visual.setXRot(90.0f);
-        visual.setYRot(0.0f);
+                ModEntities.BASE_BEAM_VISUAL.get(), level, caster,
+                startPos, direction, length, beamType);
         level.addFreshEntity(visual);
 
+        // ターゲット検索
         LivingEntity hitTarget = findFirstValidTarget(level, startPos, endPos);
 
         Vec3 particlePos = hitTarget != null

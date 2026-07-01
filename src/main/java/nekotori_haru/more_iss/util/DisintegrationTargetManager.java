@@ -18,6 +18,12 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Disintegration 詠唱中ターゲット拘束マネージャー。
  * AT（AccessTransformer）の認識エラーを完全に回避するため、VarHandleで被弾フラグを制御します。
+ *
+ * 修正点:
+ *  - lock() で setNoAi(true) にした Mob 参照を LockEntry に保持し、
+ *    release() で確実に setNoAi(false) に戻すようにした。
+ *    (以前は LOCKED マップから削除するだけで NoAi フラグが解除されず、
+ *     スライム分裂等で子エンティティ生成後も移動不能になる不具合があった)
  */
 public class DisintegrationTargetManager {
 
@@ -56,14 +62,30 @@ public class DisintegrationTargetManager {
 
     public static void lock(UUID targetUUID, Entity target) {
         if (target == null) return;
-        LOCKED.put(targetUUID, new LockEntry(target.position()));
+
+        Mob mobRef = null;
         if (target instanceof Mob mob) {
+            mobRef = mob;
             mob.setNoAi(true);
         }
+
+        LOCKED.put(targetUUID, new LockEntry(target.position(), mobRef));
     }
 
     public static void release(UUID targetUUID) {
-        LOCKED.remove(targetUUID);
+        LockEntry entry = LOCKED.remove(targetUUID);
+        if (entry != null && entry.mobRef != null && !entry.mobRef.isRemoved()) {
+            entry.mobRef.setNoAi(false);
+        }
+    }
+
+    /**
+     * 現在ロック中の全ターゲットを強制解除する（詠唱中断・プラグインリロード等の緊急用）。
+     */
+    public static void releaseAll() {
+        for (UUID uuid : LOCKED.keySet()) {
+            release(uuid);
+        }
     }
 
     public static boolean isLocked(UUID targetUUID) {
@@ -77,7 +99,7 @@ public class DisintegrationTargetManager {
         LockEntry entry = LOCKED.get(entity.getUUID());
         if (entry == null) return;
 
-        // 死亡・削除されたら解除
+        // 死亡・削除されたら NoAi を戻してから解除
         if (entity.isRemoved() || entity.isDeadOrDying()) {
             release(entity.getUUID());
             return;
@@ -110,6 +132,11 @@ public class DisintegrationTargetManager {
 
     private static class LockEntry {
         final Vec3 lockedPos;
-        LockEntry(Vec3 lockedPos) { this.lockedPos = lockedPos; }
+        final Mob mobRef;
+
+        LockEntry(Vec3 lockedPos, Mob mobRef) {
+            this.lockedPos = lockedPos;
+            this.mobRef = mobRef;
+        }
     }
 }

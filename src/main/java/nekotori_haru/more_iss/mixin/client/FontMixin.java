@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.OutlineBufferSource;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
 import org.joml.Matrix4f;
@@ -127,12 +128,10 @@ public abstract class FontMixin {
 
         String itemName = selected.getHoverName().getString();
 
-        // 条件1: 指輪である
         if (selected.getItem() instanceof RingOfSynthesisItem) {
             return text.equals(itemName) || text.contains(itemName);
         }
 
-        // 条件2: アップグレード済みのアイテムである
         if (SynthesisUpgradeData.isUpgraded(selected)) {
             return text.equals(itemName) || text.contains(itemName);
         }
@@ -147,6 +146,15 @@ public abstract class FontMixin {
         PoseStack poseStack = new PoseStack();
         poseStack.mulPoseMatrix(matrix);
 
+        // ⭐ 修正点: BufferSource 以外の場合は通常描画にフォールバック
+        if (!(bufferSource instanceof MultiBufferSource.BufferSource)) {
+            font.drawInBatch(str, x, y, 0xFFFFFF, dropShadow, matrix, bufferSource,
+                    Font.DisplayMode.NORMAL, 0, 0, false);
+            return;
+        }
+
+        MultiBufferSource.BufferSource buffer = (MultiBufferSource.BufferSource) bufferSource;
+
         float wavespeed = Math.max(3.0f, 7.0f - (str.length() * 0.1f));
 
         RenderUtils.renderWavingTextDirect(
@@ -158,7 +166,7 @@ public abstract class FontMixin {
                 wavespeed,
                 1.0f,
                 poseStack,
-                (MultiBufferSource.BufferSource) bufferSource,
+                buffer,
                 dropShadow
         );
     }

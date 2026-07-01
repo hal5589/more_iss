@@ -24,6 +24,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.List;
 
@@ -65,11 +66,14 @@ public class HolyRaySpell extends AbstractSpell {
                 .bbInflation(.15f)
                 .build();
 
-        double distance = hitResult.getLocation().distanceTo(entity.getEyePosition());
+        Vec3 startPos = entity.getEyePosition().subtract(0, 0.15, 0);
+        Vec3 direction = entity.getLookAngle();
+        double distance = hitResult.getLocation().distanceTo(startPos);
 
         if (!level.isClientSide) {
-            BaseBeamVisualEntity visual = new BaseBeamVisualEntity(ModEntities.BASE_BEAM_VISUAL.get(), level, entity, distance, BeamType.HOLY);
-            visual.setPos(entity.getX(), entity.getEyeY() - 0.2, entity.getZ());
+            BaseBeamVisualEntity visual = new BaseBeamVisualEntity(
+                    ModEntities.BASE_BEAM_VISUAL.get(), level, entity,
+                    startPos, direction, distance, BeamType.HOLY);
             level.addFreshEntity(visual);
         }
 

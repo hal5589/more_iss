@@ -49,7 +49,6 @@ public class BaseBeamRenderer extends EntityRenderer<BaseBeamVisualEntity> {
         return LayerDefinition.create(meshdefinition, 64, 64);
     }
 
-    // ⭐ カリングを完全に無効化（末端でビームが消える問題を回避）
     @Override
     public boolean shouldRender(BaseBeamVisualEntity entity, Frustum camera, double x, double y, double z) {
         return true;
@@ -66,8 +65,11 @@ public class BaseBeamRenderer extends EntityRenderer<BaseBeamVisualEntity> {
         float f = entity.tickCount + partialTicks;
 
         poseStack.translate(0, 0.1, 0);
+
+        // ★ Iron's Spells のレンダラーと同じオフセットを適用
         poseStack.mulPose(Axis.YP.rotationDegrees(-entity.getYRot() - 180.0F));
         poseStack.mulPose(Axis.XP.rotationDegrees(-entity.getXRot() - 90));
+
         poseStack.scale(scalar, scalar, scalar);
 
         float alpha = 0.5f * Mth.clamp(1f - f / lifetime, 0, 1);
@@ -81,7 +83,7 @@ public class BaseBeamRenderer extends EntityRenderer<BaseBeamVisualEntity> {
         for (float i = 0; i < entity.getDistance() * 4; i += length) {
             poseStack.translate(0, length, 0);
 
-            // 1. 【外周】半透明オーバーレイ
+            // 外周（半透明オーバーレイ）
             VertexConsumer overlayConsumer = bufferSource.getBuffer(RenderType.energySwirl(TEXTURE_OVERLAY, 0, 0));
             {
                 poseStack.pushPose();
@@ -92,7 +94,7 @@ public class BaseBeamRenderer extends EntityRenderer<BaseBeamVisualEntity> {
                 poseStack.popPose();
             }
 
-            // 2. 【中間】属性カラーコア
+            // 中間（属性カラーコア）
             VertexConsumer coreConsumer = bufferSource.getBuffer(RenderType.energySwirl(TEXTURE_CORE, 0, 0));
             {
                 poseStack.pushPose();
@@ -103,7 +105,7 @@ public class BaseBeamRenderer extends EntityRenderer<BaseBeamVisualEntity> {
                 poseStack.popPose();
             }
 
-            // 3. 【中心】ホワイトコア
+            // 中心（ホワイトコア）
             {
                 poseStack.pushPose();
                 float expansion = Mth.clampedLerp(0.35f, 0, f / lifetime);
