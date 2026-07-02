@@ -34,7 +34,6 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Random;
 
-@AutoSpellConfig
 public class FunnelSpell extends AbstractSpell {
     private final ResourceLocation spellId = ResourceLocation.fromNamespaceAndPath("more_iss", "funnel");
 

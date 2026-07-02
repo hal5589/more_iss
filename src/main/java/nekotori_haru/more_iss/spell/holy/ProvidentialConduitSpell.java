@@ -21,7 +21,6 @@ import net.minecraft.world.level.Level;
 import javax.annotation.Nullable;
 import java.util.List;
 
-@AutoSpellConfig
 public class ProvidentialConduitSpell extends AbstractSpell {
 
     private final ResourceLocation spellId = new ResourceLocation("more_iss", "providential_conduit");

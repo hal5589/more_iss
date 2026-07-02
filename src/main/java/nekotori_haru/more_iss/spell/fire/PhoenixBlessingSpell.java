@@ -20,7 +20,6 @@ import net.minecraft.world.level.Level;
 import java.util.List;
 import java.util.Optional;
 
-@AutoSpellConfig
 public class PhoenixBlessingSpell extends AbstractSpell {
     private final ResourceLocation spellId = ResourceLocation.fromNamespaceAndPath(More_iss.MODID, "phoenix_blessing");
     private final DefaultConfig defaultConfig = new DefaultConfig()

@@ -128,6 +128,7 @@ public class ModEntities {
                     .build(More_iss.MODID + ":star")
     );
 
+
     public static void register(IEventBus bus) {
         ENTITIES.register(bus);
     }

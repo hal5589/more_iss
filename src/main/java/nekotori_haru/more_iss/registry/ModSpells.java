@@ -36,7 +36,7 @@ public class ModSpells {
     public static final RegistryObject<AbstractSpell> GLACIAL_EXECUTION = SPELLS.register("glacial_execution", GlacialExecutionSpell::new);
     public static final RegistryObject<AbstractSpell> ABSOLUTE_ZERO = SPELLS.register("absolute_zero", AbsoluteZeroSpell::new);
     public static final RegistryObject<AbstractSpell> SUMMON_CRYOMANCER = SPELLS.register("summon_cryomancer", SummonCryomancerSpell::new);
-
+    public static final RegistryObject<AbstractSpell> CRYO_CONVERGENCE = SPELLS.register("cryo_convergence", CryoConvergenceSpell::new);
 
     // 雷系統
     public static final RegistryObject<AbstractSpell> RAISEN = SPELLS.register("raisen", ThunderboltFlash::new);
