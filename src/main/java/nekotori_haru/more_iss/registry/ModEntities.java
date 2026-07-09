@@ -128,8 +128,17 @@ public class ModEntities {
                     .build(More_iss.MODID + ":star")
     );
 
+    public static final DeferredRegister<EntityType<?>> ENTITY_TYPES =
+            DeferredRegister.create(ForgeRegistries.ENTITY_TYPES, More_iss.MODID);
+
+    public static final RegistryObject<EntityType<LittleMonolithEntity>> LITTLE_MONOLITH =
+            ENTITY_TYPES.register("little_monolith",
+                    () -> EntityType.Builder.<LittleMonolithEntity>of(LittleMonolithEntity::new, MobCategory.MISC)
+                            .sized(0.8f, 2.0f)
+                            .build("little_monolith"));
 
     public static void register(IEventBus bus) {
         ENTITIES.register(bus);
+        ENTITY_TYPES.register(bus);
     }
 }

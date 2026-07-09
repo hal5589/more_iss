@@ -185,7 +185,7 @@ dependencies {
     implementation fg.deobf("curse.maven:slash-241596:4937125")
     implementation fg.deobf("curse.maven:patchouli-306770:7731017")
     implementation fg.deobf("curse.maven:endinglib-1471165:8026953")
-
+    implementation fg.deobf("curse.maven:fakeplayer-845992:8351423")
 
     compileOnly fg.deobf("mezz.jei:jei-1.20.1-forge-api:15.3.0.4")
     runtimeOnly fg.deobf("mezz.jei:jei-1.20.1-forge:15.3.0.4")

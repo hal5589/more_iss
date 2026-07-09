@@ -1,18 +1,18 @@
 {
   "spell.more_iss.flame_ray": "Flame Ray",
-  "spell.more_iss.flame_ray.guide": "Fires a blazing ray forward, heavily igniting targets hit for several seconds.",
+  "spell.more_iss.flame_ray.guide": "Fires a blazing ray forward, igniting targets hit for several seconds.",
 
   "spell.more_iss.solar_ray": "Solar Ray",
   "spell.more_iss.solar_ray.guide": "Shoots a compressed beam of sunlight. Gradually melts the target's armor, reducing armor value and durability. Effect increases with consecutive hits.",
 
   "spell.more_iss.holy_ray": "Holy Ray",
-  "spell.more_iss.holy_ray.guide": "Fires a sacred beam that deals bonus damage to undead mobs.",
+  "spell.more_iss.holy_ray.guide": "Fires a sacred beam that deals extra damage to undead.",
 
   "spell.more_iss.void_ray": "Void Ray",
-  "spell.more_iss.void_ray.guide": "Emits a dense purple beam infused with void energy. Boasts superior range compared to other ray spells.",
+  "spell.more_iss.void_ray.guide": "Emits a dense purple beam infused with void energy. Outranges other ray spells.",
 
-  "spell.more_iss.spectal_ray": "Spectral Ray",
-  "spell.more_iss.spectal_ray.guide": "Fires a pale, translucent beam. Causes summoned mobs to focus their attention on the target.",
+  "spell.more_iss.spectral_ray": "Spectral Ray",
+  "spell.more_iss.spectral_ray.guide": "Emits a pale, spectral beam that draws summoned allies' attention to the target.",
 
   "spell.more_iss.ender_shooting_star": "Arcane Shooting Star",
   "spell.more_iss.ender_shooting_star.guide": "Launches a barrage of magic missiles like a meteor shower.",
@@ -26,16 +26,16 @@
   "spell.more_iss.absolute_zero.guide": "Releases a wave of absolute zero, damaging enemies and heavily slowing them. Also summons multiple ice phantoms in concentric circles that shatter and fire icicles upon disappearing.",
 
   "spell.more_iss.providential_conduit": "Providential Conduit",
-  "spell.more_iss.providential_conduit.guide": "Transfers all beneficial buffs from the caster to the target. Duration scales with spell level and magic power.",
+  "spell.more_iss.providential_conduit.guide": "Transfers all beneficial effects from the caster to the target. Duration scales with spell level and magic power.",
 
   "spell.more_iss.sacrificial_edge": "Sacrificial Edge",
   "spell.more_iss.sacrificial_edge.guide": "Applies a self-inflicted damage-over-time effect. Casting again unleashes a powerful blood slash proportional to the total damage taken.",
 
   "spell.more_iss.overburst_blood": "Overburst",
-  "spell.more_iss.overburst_blood.guide": "An unknown scroll that fuses charged magic with the price of cardiac arrest, triggering a violent blood eruption.\nGreatly boosts attack power and allows attacks to ignore all defenses.",
+  "spell.more_iss.overburst_blood.guide": "An unknown scroll that fuses charged magic with the cost of the caster's life force, triggering a violent blood eruption.\nGreatly boosts attack power and allows attacks to ignore all defenses.",
 
   "spell.more_iss.freischutz": "Freischütz",
-  "spell.more_iss.freischutz.guide": "Forms a pact with a demon, loading 7 homing bullets. If all bullets are fired within the contract duration, retribution will follow.",
+  "spell.more_iss.freischutz.guide": "Forms a pact with a demon, loading 7 homing bullets. If all bullets are fired before the contract expires, retribution will follow.",
 
   "spell.more_iss.soul_link": "Soul Link",
   "spell.more_iss.soul_link.guide": "A mysterious spell that links the souls of the caster and the target.",
@@ -91,7 +91,7 @@
   "item.irons_spellbooks.scroll.more_iss.unfading": "Scroll: Unfading",
 
   "spell.more_iss.disintegration": "Disintegration",
-  "spell.more_iss.disintegration.guide": "Locks onto a target while channeling, then destroys it at a quantum level upon release. Ignores all defenses and even bypasses immortality.",
+  "spell.more_iss.disintegration.guide": "Locks onto a target while channeling, then erases it at the quantum level upon release. Ignores all defenses and even bypasses immortality.",
   "item.irons_spellbooks.scroll.more_iss.disintegration": "Scroll: Disintegration",
 
   "spell.more_iss.funnel": "Funnel",
@@ -103,7 +103,7 @@
 
   "entity.more_iss.napalm_rain": "Napalm",
   "spell.more_iss.napalm_rain": "Napalm Rain",
-  "spell.more_iss.napalm_rain.guide": "Scatters numerous bombs, dealing fire and explosive damage to nearby mobs.",
+  "spell.more_iss.napalm_rain.guide": "Scatters numerous bombs, dealing fire and explosive damage to nearby enemies.",
 
   "effect.more_iss.phoenix_blessing": "Phoenix Blessing",
   "spell.more_iss.phoenix_blessing": "Phoenix Blessing",
@@ -114,7 +114,6 @@
 
   "spell.more_iss.meteor_fall": "Meteor Fall",
   "spell.more_iss.meteor_fall.description": "Calls down a rain of meteors from above.",
-  "ui.irons_spellbooks.duration": "Duration: %s sec",
 
   "spell.more_iss.polychromatic_beam": "Polychromatic Beam",
   "spell.more_iss.polychromatic_beam.guide": "Fires a rainbow beam imbued with ice, fire, and arcane energy, damaging enemies in its path.",
@@ -141,11 +140,67 @@
   "death.attack.more_iss.solar_ray": "%1$s was melted by %2$s's Solar Ray",
   "death.attack.more_iss.holy_ray": "%1$s was judged by %2$s's Holy Ray",
   "death.attack.more_iss.void_ray": "%1$s was consumed by %2$s's Void Ray",
-  "death.attack.more_iss.spectal_ray": "%1$s was pierced by %2$s's Spectral Ray",
+  "death.attack.more_iss.spectral_ray": "%1$s was pierced by %2$s's Spectral Ray",
   "death.attack.more_iss.funnel": "%1$s was obliterated by %2$s's Funnel barrage",
 
   "item.more_iss.ring_of_synthesis": "Ring of Synthesis",
   "item.more_iss.ring_of_synthesis.effect": "When Equipped:",
 
-  "itemGroup.more_iss": "More ISS"
+  "itemGroup.more_iss": "More ISS",
+  "attribute.more_iss.synthesis_spell_power": "Synthesis Spell Power",
+
+  "item.more_iss.synthesis_upgrade_orb": "Synthesis Upgrade Orb",
+  "item.more_iss.synthesis_upgrade_orb.effect.detail": "+5% Synthesis Spell Power",
+
+  "item.more_iss.phoenix_fallen_feather": "Phoenix Feather",
+  "item.more_iss.blazing_nova": "Blazing Nova",
+  "item.more_iss.record_of_the_gods": "Record of the Gods",
+  "item.more_iss.primal_core": "Primal Core",
+  "item.more_iss.absolute_zero_shard": "Absolute Zero Shard",
+  "item.more_iss.forbidden_grimoire": "Forbidden Grimoire",
+  "item.more_iss.mana_circuit": "Mana Circuit",
+
+  "item.more_iss.ring_of_mana_cycle": "Ring of Mana Cycle",
+
+  "item.more_iss.spellbook_of_concentration": "Spellbook of Concentration",
+  "item.more_iss.spellbook_of_concentration.boost": "All spells inserted into this spellbook gain +3 levels",
+
+  "entity.more_iss.summoned_pyromancer": "Summoned Pyromancer",
+  "entity.more_iss.summoned_cryomancer": "Summoned Cryomancer",
+  "entity.more_iss.summoned_priest": "Summoned Priest",
+  "entity.more_iss.summoned_archevoker": "Summoned Archevoker",
+  "entity.more_iss.summoned_apothecarist": "Summoned Apothecarist",
+
+  "spell.more_iss.summon_pyromancer": "Summon Pyromancer",
+  "spell.more_iss.summon_cryomancer": "Summon Cryomancer",
+  "spell.more_iss.summon_priest": "Summon Priest",
+  "spell.more_iss.summon_archevoker": "Summon Archevoker",
+  "spell.more_iss.summon_apothecarist": "Summon Apothecarist",
+
+  "ui.more_iss.summon_power": "Summon Power: %s%%",
+
+  "spell.more_iss.summon_wizards": "Summon Wizards",
+  "spell.more_iss.summon_wizards.guide": "Summons five mages at once.",
+
+  "spell.more_iss.starlight": "Starlight",
+  "spell.more_iss.starlight.guide": "Scatters multiple floating stars that explode after a short duration. A legendary spell.",
+  "entity.more_iss.star": "Star",
+
+  "ui.more_iss.oblivion.blocked": "Your magic was nullified by Oblivion.",
+
+  "item.more_iss.eternal_halo": "Eternal Halo",
+  "item.more_iss.eternal_robe": "Eternal Robe",
+  "item.more_iss.eternal_leggings": "Eternal Leggings",
+  "item.more_iss.eternal_boots": "Eternal Boots",
+  "entity.more_iss.eternal_wizard": "Eternal Wizard",
+
+  "item.more_iss.ring_of_mana_conversion": "Ring of Conversion",
+  "item.more_iss.ring_of_mana_conversion.desc": "A ring that consumes mana to grant additional health",
+  "item.more_iss.ring_of_mana_conversion.circuits": "Circuits: %d",
+
+  "item.more_iss.ring_of_thunder_resonance": "Ring of Thunder Resonance",
+  "item.more_iss.ring_of_thunder_resonance.desc": "Amplifies the Charged effect based on circuit count",
+  "item.more_iss.ring_of_thunder_resonance.circuits": "Circuits: %d",
+
+  "death.attack.more_iss.synthesis_magic": "%1$s was consumed by prismatic light through synthesis magic"
 }

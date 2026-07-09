@@ -3,7 +3,8 @@ package nekotori_haru.more_iss.registry;
 import io.redspace.ironsspellbooks.api.registry.SpellRegistry;
 import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
 import nekotori_haru.more_iss.More_iss;
-import nekotori_haru.more_iss.entity.summoned.SummonedApothecarist;
+import nekotori_haru.more_iss.spell.blood.OverburstBloodSpell;
+import nekotori_haru.more_iss.spell.blood.SacrificialEdgeSpell;
 import nekotori_haru.more_iss.spell.fire.*;
 import nekotori_haru.more_iss.spell.ice.*;
 import nekotori_haru.more_iss.spell.nature.*;
@@ -29,6 +30,7 @@ public class ModSpells {
     public static final RegistryObject<AbstractSpell> PHOENIX_BLESSING = SPELLS.register("phoenix_blessing", PhoenixBlessingSpell::new);
     public static final RegistryObject<AbstractSpell> METEOR_FALL = SPELLS.register("meteor_fall", MeteorFallSpell::new);
     public static final RegistryObject<AbstractSpell> SUMMON_PYROMANCER = SPELLS.register("summon_pyromancer", SummonPyromancerSpell::new);
+    public static final RegistryObject<AbstractSpell> INFERNO_STEP = SPELLS.register("inferno_step", InfernoStepSpell::new);
 
 
     // 氷系統
@@ -40,6 +42,7 @@ public class ModSpells {
 
     // 雷系統
     public static final RegistryObject<AbstractSpell> RAISEN = SPELLS.register("raisen", ThunderboltFlash::new);
+    public static final RegistryObject<AbstractSpell> PLASMA_STEP = SPELLS.register("plasma_step", PlasmaStepSpell::new);
 
     // 自然系統
     public static final RegistryObject<AbstractSpell> SOLAR_RAY = SPELLS.register("solar_ray", SolarRaySpell::new);
@@ -79,6 +82,8 @@ public class ModSpells {
     public static final RegistryObject<AbstractSpell> SUMMON_WIZARDS = SPELLS.register("summon_wizards", SummonWizardsSpell::new);
     public static final RegistryObject<AbstractSpell> STARLIGHT = SPELLS.register("starlight", StarlightSpell::new);
     public static final RegistryObject<AbstractSpell> SEVEN_COLORED_CAGE = SPELLS.register("seven_colored_cage", SevenColoredCageSpell::new);
+    public static final RegistryObject<AbstractSpell> LITTLE_MONOLITH = SPELLS.register("little_monolith", LittleMonolithSpell::new);
+
 
     public static void register(IEventBus bus) {
         SPELLS.register(bus);

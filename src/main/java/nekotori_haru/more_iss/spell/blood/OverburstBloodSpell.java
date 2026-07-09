@@ -1,11 +1,11 @@
-package nekotori_haru.more_iss.spell.synthesis;
+package nekotori_haru.more_iss.spell.blood;
 
 import io.redspace.ironsspellbooks.api.config.DefaultConfig;
 import io.redspace.ironsspellbooks.api.magic.MagicData;
+import io.redspace.ironsspellbooks.api.registry.SchoolRegistry;
 import io.redspace.ironsspellbooks.api.spells.*;
 import io.redspace.ironsspellbooks.api.util.AnimationHolder;
 import nekotori_haru.more_iss.registry.ModEffects;
-import nekotori_haru.more_iss.registry.SynthesisSchoolRegistry;
 import net.minecraft.network.chat.*;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -20,7 +20,7 @@ public class OverburstBloodSpell extends AbstractSpell {
 
     private final DefaultConfig defaultConfig = new DefaultConfig()
             .setMinRarity(SpellRarity.LEGENDARY)
-            .setSchoolResource(SynthesisSchoolRegistry.SYNTHESIS_RESOURCE)
+            .setSchoolResource(SchoolRegistry.BLOOD_RESOURCE)
             .setMaxLevel(3)
             .setCooldownSeconds(120)
             .setAllowCrafting(false)

@@ -195,6 +195,16 @@
   "item.more_iss.eternal_robe": ":_M久遠のローブ",
   "item.more_iss.eternal_leggings": ":_M久遠のレギンス",
   "item.more_iss.eternal_boots": ":_M久遠のブーツ",
-  "entity.more_iss.eternal_wizard": ":_M久遠の魔術師"
+  "entity.more_iss.eternal_wizard": ":_M久遠の魔術師",
+
+  "item.more_iss.ring_of_mana_conversion.desc": "マナを消費して追加の体力を得る指輪",
+  "item.more_iss.ring_of_mana_conversion.circuits": "回路数: %d",
+  "item.more_iss.ring_of_mana_conversion": "変換の指輪",
+
+  "item.more_iss.ring_of_thunder_resonance": "雷共鳴の指輪",
+  "item.more_iss.ring_of_thunder_resonance.desc": "帯電バフを回路数分増幅する指輪",
+  "item.more_iss.ring_of_thunder_resonance.circuits": "回路数: %d",
+
+  "death.attack.more_iss.synthesis_magic": "%1$sは融合魔法によって虹の光に飲まれた"
 }
 

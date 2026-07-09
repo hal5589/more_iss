@@ -5,9 +5,14 @@ import nekotori_haru.more_iss.blockentity.ArcaneCraftingTableBlockEntity;
 import nekotori_haru.more_iss.client.ArcaneCraftingScreen;
 import nekotori_haru.more_iss.client.model.GlacialExecution;
 import nekotori_haru.more_iss.client.renderer.*;
-import nekotori_haru.more_iss.registry.MoreIssConfig;
+import nekotori_haru.more_iss.client.screen.BaseRingScreen;
+import nekotori_haru.more_iss.client.screen.RingOfManaConversionScreen;
+import nekotori_haru.more_iss.client.screen.RingOfThunderResonanceScreen;
+import nekotori_haru.more_iss.entity.LittleMonolithEntity;
 import nekotori_haru.more_iss.entity.EternalWizardEntity;
 import nekotori_haru.more_iss.event.FrostArmorDamageEventHandler;
+import nekotori_haru.more_iss.event.ManaConversionHandler;
+import nekotori_haru.more_iss.event.ThunderResonanceHandler;
 import nekotori_haru.more_iss.menu.ArcaneCraftingMenu;
 import nekotori_haru.more_iss.network.ModNetwork;
 import nekotori_haru.more_iss.recipe.ArcaneCraftingRecipeSerializer;
@@ -67,6 +72,9 @@ public class More_iss {
         BLOCK_ENTITIES.register(modEventBus);
         MENU_TYPES.register(modEventBus);
 
+        // ModMenus の MENU_TYPES を登録
+        ModMenus.MENU_TYPES.register(modEventBus);
+
         // イベントリスナー
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(this::registerRecipes);
@@ -78,9 +86,12 @@ public class More_iss {
         DisintegrationState.init();
         DisintegrationTargetManager.init();
 
+        // ⭐ イベントハンドラを登録
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new ManaConversionHandler());
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new FrostArmorDamageEventHandler());
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new ThunderResonanceHandler());
 
-        // ⭐ コンフィグ登録
+        // コンフィグ登録
         MoreIssConfig.register();
     }
 
@@ -101,7 +112,13 @@ public class More_iss {
 
     // ───────────── クライアントセットアップ ─────────────
     private void clientSetup(FMLClientSetupEvent event) {
-        event.enqueueWork(() -> MenuScreens.register(ARCANE_CRAFTING_MENU.get(), ArcaneCraftingScreen::new));
+        event.enqueueWork(() -> {
+            System.out.println("[DEBUG] Registering screens...");
+            MenuScreens.register(ARCANE_CRAFTING_MENU.get(), ArcaneCraftingScreen::new);
+            MenuScreens.register(ModMenus.RING_OF_MANA_CONVERSION.get(), RingOfManaConversionScreen::new);
+            MenuScreens.register(ModMenus.RING_OF_THUNDER_RESONANCE.get(), RingOfThunderResonanceScreen::new);
+            System.out.println("[DEBUG] Screens registered!");
+        });
     }
 
     // ───────────── レンダラー登録 ─────────────
@@ -115,6 +132,7 @@ public class More_iss {
         event.registerEntityRenderer(ModEntities.SUMMONED_PYROMANCER.get(), SummonedPyromancerRenderer::new);
         event.registerEntityRenderer(ModEntities.ETERNAL_WIZARD.get(), EternalWizardRenderer::new);
         event.registerEntityRenderer(ModEntities.STAR.get(), StarRenderer::new);
+        event.registerEntityRenderer(ModEntities.LITTLE_MONOLITH.get(), LittleMonolithRenderer::new);
     }
 
     // ───────────── レイヤー定義登録 ─────────────
@@ -124,9 +142,10 @@ public class More_iss {
         event.registerLayerDefinition(GlacialExecution.LAYER_LOCATION, GlacialExecution::createBodyLayer);
     }
 
-    // ⭐ 属性登録（EternalWizardEntity 召喚に必須）
+    // 属性登録
     private void registerAttributes(EntityAttributeCreationEvent event) {
         event.put(ModEntities.ETERNAL_WIZARD.get(), EternalWizardEntity.prepareAttributes().build());
-        LOGGER.info("EternalWizardEntity attributes registered successfully!");
+        event.put(ModEntities.LITTLE_MONOLITH.get(), LittleMonolithEntity.createAttributes().build());
+        LOGGER.info("Entity attributes registered successfully!");
     }
 }

@@ -20,9 +20,11 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
@@ -31,8 +33,11 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 import javax.annotation.Nullable;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
+import java.util.function.Predicate;
 
 public class FunnelSpell extends AbstractSpell {
     private final ResourceLocation spellId = ResourceLocation.fromNamespaceAndPath("more_iss", "funnel");
@@ -248,8 +253,32 @@ public class FunnelSpell extends AbstractSpell {
                 }
             });
 
-            // 💥 【完全一致】それぞれの砲撃の射線がブロックや敵に遮られたその衝突点（actualHitPos）で爆発
+            // 💥 爆発本体はそのまま起こす（見た目・ダメージは維持）。
+            // ノックバックとアイテム消滅だけを爆発後に打ち消す。
             float explosionStrength = getSpellPower(spellLevel, entity) * 0.05f;
+
+            // ノックバック対象範囲（爆発の影響範囲を広めに取る: power*2ブロック相当が目安）
+            double affectRadius = Math.max(explosionStrength * 2.0, HIT_RADIUS);
+            AABB affectedArea = new AABB(
+                    actualHitPos.x - affectRadius, actualHitPos.y - affectRadius, actualHitPos.z - affectRadius,
+                    actualHitPos.x + affectRadius, actualHitPos.y + affectRadius, actualHitPos.z + affectRadius
+            );
+
+            // 爆発前の速度を保存（ノックバックを後で打ち消すため）
+            Map<LivingEntity, Vec3> preExplosionMotion = new HashMap<>();
+            for (Entity candidate : level.getEntities((Entity) null, affectedArea, e -> e instanceof LivingEntity)) {
+                LivingEntity living = (LivingEntity) candidate;
+                preExplosionMotion.put(living, living.getDeltaMovement());
+            }
+
+            // 爆発前に存在していたItemEntityの情報を記録（消滅した場合に同じアイテムを再生成するため）
+            Map<ItemEntity, ItemEntityState> preExplosionItems = new HashMap<>();
+            for (Entity candidate : level.getEntities((Entity) null, affectedArea, e -> e instanceof ItemEntity)) {
+                ItemEntity item = (ItemEntity) candidate;
+                preExplosionItems.put(item, new ItemEntityState(item));
+            }
+
+            // 💥 【完全一致】それぞれの砲撃の射線がブロックや敵に遮られたその衝突点（actualHitPos）で爆発
             level.explode(
                     entity,
                     getDamageSource(entity),
@@ -260,10 +289,52 @@ public class FunnelSpell extends AbstractSpell {
                     Level.ExplosionInteraction.NONE
             );
 
+            // ノックバックを打ち消す：爆発で変化した速度を爆発前の値に戻す
+            for (Map.Entry<LivingEntity, Vec3> e : preExplosionMotion.entrySet()) {
+                LivingEntity living = e.getKey();
+                if (!living.isRemoved()) {
+                    living.setDeltaMovement(e.getValue());
+                }
+            }
+
+            // アイテムへのダメージ・消滅を打ち消す
+            for (Map.Entry<ItemEntity, ItemEntityState> e : preExplosionItems.entrySet()) {
+                ItemEntity item = e.getKey();
+                ItemEntityState before = e.getValue();
+                if (item.isRemoved()) {
+                    // 爆発で消滅させられた場合は同じアイテムスタックで再生成する
+                    ItemEntity restored = new ItemEntity(level, before.x, before.y, before.z, before.stack.copy());
+                    restored.setDeltaMovement(before.motion);
+                    restored.setPickUpDelay(0);
+                    level.addFreshEntity(restored);
+                } else {
+                    // 消滅していなくても、爆発によるノックバックだけは打ち消す
+                    item.setDeltaMovement(before.motion);
+                }
+            }
+
             // パーティクルを着弾点に出す
             MagicManager.spawnParticles(level, ParticleHelper.UNSTABLE_ENDER,
                     actualHitPos.x, actualHitPos.y, actualHitPos.z,
                     20, HIT_RADIUS * 0.5, HIT_RADIUS * 0.5, HIT_RADIUS * 0.5, .05, false);
+        }
+    }
+
+    /**
+     * 爆発前のItemEntityの状態（座標・速度・アイテムスタック）を保存しておくための入れ物。
+     * 爆発でアイテムが消滅・吹き飛ばされた場合に元の状態へ復元するために使う。
+     */
+    private static class ItemEntityState {
+        final double x, y, z;
+        final Vec3 motion;
+        final net.minecraft.world.item.ItemStack stack;
+
+        ItemEntityState(ItemEntity item) {
+            this.x = item.getX();
+            this.y = item.getY();
+            this.z = item.getZ();
+            this.motion = item.getDeltaMovement();
+            this.stack = item.getItem().copy();
         }
     }
 

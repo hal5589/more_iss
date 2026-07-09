@@ -66,7 +66,6 @@ public class PolychromaticLanceEntity extends Projectile {
         Vec3 delta = this.getDeltaMovement();
         Vec3 end = start.add(delta);
 
-        // ⭐ サーバー側のみ衝突処理（クライアントでは行わない）
         if (!this.level().isClientSide) {
             Optional<EntityHitResult> entityHit = this.findHitEntity(start, end);
             if (entityHit.isPresent()) {
@@ -87,10 +86,8 @@ public class PolychromaticLanceEntity extends Projectile {
             }
         }
 
-        // 移動（クライアント側でも移動する）
         this.setPos(end.x, end.y, end.z);
 
-        // 軌跡パーティクル（クライアント側のみ）
         if (this.level().isClientSide && this.tickCount % 2 == 0) {
             Vec3 pos = this.position();
             if (effectType == 0) {
@@ -134,7 +131,6 @@ public class PolychromaticLanceEntity extends Projectile {
 
     @Override
     protected void onHitEntity(EntityHitResult result) {
-        // サーバー側でのみ処理
         if (this.level().isClientSide) return;
 
         if (result.getEntity() instanceof LivingEntity target) {
@@ -143,25 +139,27 @@ public class PolychromaticLanceEntity extends Projectile {
                 owner = (LivingEntity) this.getOwner();
             }
 
+            // ★ 微量ダメージを削除（0.1ダメージは与えない）
+            // 代わりに、ダメージソースにプレイヤー（owner）を直接指定する
+
             float finalDamage = damage;
 
-            // プレイヤーソースの微量ダメージ (キルクレジット用)
-            DamageSource killCreditSource = this.damageSources().indirectMagic(this, owner);
-            target.hurt(killCreditSource, 0.1f);
+            // ★ すべてのケースでプレイヤーソースの魔法ダメージを使用
+            DamageSource source = this.damageSources().indirectMagic(this, owner);
 
             if (effectType == 0) {
                 finalDamage = damage * 1.3f;
-                target.hurt(this.damageSources().magic(), finalDamage);
+                target.hurt(source, finalDamage);
             } else if (effectType == 1) {
-                target.hurt(this.damageSources().freeze(), finalDamage);
+                target.hurt(source, finalDamage);
                 target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 2));
                 target.setTicksFrozen(40);
             } else if (effectType == 2) {
-                target.hurt(this.damageSources().onFire(), finalDamage);
+                target.hurt(source, finalDamage);
                 target.setSecondsOnFire(3);
             }
 
-            // パーティクル（サーバー側でもOK、MagicManagerはサーバー側で動作）
+            // パーティクル（サーバー側でMagicManagerを使用）
             MagicManager.spawnParticles(this.level(), ParticleTypes.ENCHANT,
                     target.getX(), target.getY() + target.getBbHeight() / 2, target.getZ(),
                     30, 0.8, 0.8, 0.8, 0.2, true);

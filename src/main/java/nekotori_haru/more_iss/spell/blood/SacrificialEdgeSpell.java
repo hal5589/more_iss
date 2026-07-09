@@ -1,13 +1,13 @@
-package nekotori_haru.more_iss.spell.synthesis;
+package nekotori_haru.more_iss.spell.blood;
 
 import io.redspace.ironsspellbooks.api.config.DefaultConfig;
 import io.redspace.ironsspellbooks.api.magic.MagicData;
+import io.redspace.ironsspellbooks.api.registry.SchoolRegistry;
 import io.redspace.ironsspellbooks.api.spells.*;
 import io.redspace.ironsspellbooks.api.util.Utils;
 import io.redspace.ironsspellbooks.capabilities.magic.RecastInstance;
 import io.redspace.ironsspellbooks.entity.spells.blood_slash.BloodSlashProjectile;
 import nekotori_haru.more_iss.registry.ModEffects;
-import nekotori_haru.more_iss.registry.SynthesisSchoolRegistry;
 import net.minecraft.network.chat.*;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -24,7 +24,7 @@ public class SacrificialEdgeSpell extends AbstractSpell {
 
     private final DefaultConfig defaultConfig = new DefaultConfig()
             .setMinRarity(SpellRarity.EPIC)
-            .setSchoolResource(SynthesisSchoolRegistry.SYNTHESIS_RESOURCE) // 🔥 融合（サンスクリット）属性
+            .setSchoolResource(SchoolRegistry.BLOOD_RESOURCE)
             .setMaxLevel(5)
             .setCooldownSeconds(60)
             .setAllowCrafting(false)

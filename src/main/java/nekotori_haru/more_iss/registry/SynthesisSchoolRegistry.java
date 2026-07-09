@@ -62,7 +62,7 @@ public class SynthesisSchoolRegistry {
                         power,
                         resist,
                         sound,
-                        ISSDamageTypes.FIRE_MAGIC
+                        ModDamageTypes.SYNTHESIS_MAGIC
                 );
             }
     );

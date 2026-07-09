@@ -3,19 +3,28 @@ package nekotori_haru.more_iss.registry;
 import io.redspace.ironsspellbooks.item.UpgradeOrbItem;
 import io.redspace.ironsspellbooks.util.ItemPropertiesHelper;
 import nekotori_haru.more_iss.More_iss;
+import nekotori_haru.more_iss.item.RingOfManaConversionItem;
 import nekotori_haru.more_iss.item.RingOfManaCycleItem;
+import nekotori_haru.more_iss.item.RingOfThunderResonanceItem;
 import nekotori_haru.more_iss.item.SpellbookOfConcentration;
 import nekotori_haru.more_iss.item.armor.EternalArmorItem;
 import nekotori_haru.more_iss.item.ringofsynthesis.RingOfSynthesisItem;
+import nekotori_haru.more_iss.menu.RingOfManaConversionContainer;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Rarity;
+import net.minecraftforge.common.extensions.IForgeMenuType;
 import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.items.ItemStackHandler;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
+
+import static nekotori_haru.more_iss.More_iss.MENU_TYPES;
 
 public class ModItems {
     public static final DeferredRegister<Item> ITEMS =
@@ -73,6 +82,12 @@ public class ModItems {
     public static final RegistryObject<ArmorItem> ETERNAL_BOOTS = ITEMS.register("eternal_boots",
             () -> new EternalArmorItem(ModArmorMaterials.ETERNAL, ArmorItem.Type.BOOTS,
                     new Item.Properties().stacksTo(1).fireResistant()));
+
+    public static final RegistryObject<Item> RING_OF_MANA_CONVERSION = ITEMS.register("ring_of_mana_conversion",
+            () -> new RingOfManaConversionItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+
+    public static final RegistryObject<Item> RING_OF_THUNDER_RESONANCE = ITEMS.register("ring_of_thunder_resonance",
+            () -> new RingOfThunderResonanceItem(new Item.Properties().stacksTo(1)));
 
     public static void register(IEventBus bus) {
         ITEMS.register(bus);
