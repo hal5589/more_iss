@@ -1,6 +1,9 @@
 package nekotori_haru.more_iss.registry;
 
-import net.minecraft.client.Minecraft;
+import net.minecraft.client.particle.ParticleEngine;
+import net.minecraft.client.particle.ParticleProvider;
+import net.minecraft.client.particle.SpriteSet;
+import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RegisterParticleProvidersEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -13,9 +16,16 @@ public class ModParticleFactories {
 
     @SubscribeEvent
     public static void registerParticleProviders(RegisterParticleProvidersEvent event) {
-        Minecraft.getInstance().particleEngine.register(
+        // ★ registerSpriteSetに匿名クラスでSpriteParticleRegistrationを直接渡す
+        event.registerSpriteSet(
                 ModParticles.YAEZAKURA_SLASH.get(),
-                YaezakuraSlashParticle.Provider::new
+                new ParticleEngine.SpriteParticleRegistration<SimpleParticleType>() {
+                    @Override
+                    public ParticleProvider<SimpleParticleType> create(SpriteSet spriteSet) {
+                        // ★ ここでProviderのインスタンスを返す
+                        return new YaezakuraSlashParticle.Provider(spriteSet);
+                    }
+                }
         );
     }
 }
