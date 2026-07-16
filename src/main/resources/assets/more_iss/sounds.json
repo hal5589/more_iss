@@ -1,0 +1,20 @@
+{
+  "spell.yaezakura.set": {
+    "subtitle": "more_iss.subtitle.spell.yaezakura.set",
+    "sounds": [
+      {
+        "name": "more_iss:spell/yaezakura_set",
+        "stream": false
+      }
+    ]
+  },
+  "spell.yaezakura.attack": {
+    "subtitle": "more_iss.subtitle.spell.yaezakura.attack",
+    "sounds": [
+      {
+        "name": "more_iss:spell/yaezakura_attack",
+        "stream": false
+      }
+    ]
+  }
+}

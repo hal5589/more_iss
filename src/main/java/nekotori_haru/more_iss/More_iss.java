@@ -1,25 +1,6 @@
 package nekotori_haru.more_iss;
 
 import com.mojang.logging.LogUtils;
-import nekotori_haru.more_iss.blockentity.ArcaneCraftingTableBlockEntity;
-import nekotori_haru.more_iss.client.ArcaneCraftingScreen;
-import nekotori_haru.more_iss.client.model.GlacialExecution;
-import nekotori_haru.more_iss.client.renderer.*;
-import nekotori_haru.more_iss.client.screen.BaseRingScreen;
-import nekotori_haru.more_iss.client.screen.RingOfManaConversionScreen;
-import nekotori_haru.more_iss.client.screen.RingOfThunderResonanceScreen;
-import nekotori_haru.more_iss.entity.LittleMonolithEntity;
-import nekotori_haru.more_iss.entity.EternalWizardEntity;
-import nekotori_haru.more_iss.event.FrostArmorDamageEventHandler;
-import nekotori_haru.more_iss.event.ManaConversionHandler;
-import nekotori_haru.more_iss.event.ThunderResonanceHandler;
-import nekotori_haru.more_iss.menu.ArcaneCraftingMenu;
-import nekotori_haru.more_iss.network.ModNetwork;
-import nekotori_haru.more_iss.recipe.ArcaneCraftingRecipeSerializer;
-import nekotori_haru.more_iss.recipe.ArcaneCraftingRecipeType;
-import nekotori_haru.more_iss.registry.*;
-import nekotori_haru.more_iss.util.DisintegrationState;
-import nekotori_haru.more_iss.util.DisintegrationTargetManager;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
@@ -36,6 +17,26 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
+import nekotori_haru.more_iss.blockentity.ArcaneCraftingTableBlockEntity;
+import nekotori_haru.more_iss.client.ArcaneCraftingScreen;
+import nekotori_haru.more_iss.client.model.GlacialExecution;
+import nekotori_haru.more_iss.client.renderer.*;
+import nekotori_haru.more_iss.client.screen.ManaFurnaceScreen;
+import nekotori_haru.more_iss.client.screen.RingOfManaConversionScreen;
+import nekotori_haru.more_iss.client.screen.RingOfThunderResonanceScreen;
+import nekotori_haru.more_iss.entity.EternalWizardEntity;
+import nekotori_haru.more_iss.entity.LittleMonolithEntity;
+import nekotori_haru.more_iss.event.FrostArmorDamageEventHandler;
+import nekotori_haru.more_iss.event.ManaConversionHandler;
+import nekotori_haru.more_iss.event.ManaFurnaceHandler;
+import nekotori_haru.more_iss.event.ThunderResonanceHandler;
+import nekotori_haru.more_iss.menu.ArcaneCraftingMenu;
+import nekotori_haru.more_iss.network.ModNetwork;
+import nekotori_haru.more_iss.recipe.ArcaneCraftingRecipeSerializer;
+import nekotori_haru.more_iss.recipe.ArcaneCraftingRecipeType;
+import nekotori_haru.more_iss.registry.*;
+import nekotori_haru.more_iss.util.DisintegrationState;
+import nekotori_haru.more_iss.util.DisintegrationTargetManager;
 import org.slf4j.Logger;
 
 @Mod(More_iss.MODID)
@@ -45,15 +46,19 @@ public class More_iss {
     public static final Logger LOGGER = LogUtils.getLogger();
 
     // ───────────── DeferredRegister ─────────────
-    public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES = DeferredRegister.create(ForgeRegistries.BLOCK_ENTITY_TYPES, MODID);
-    public static final DeferredRegister<MenuType<?>> MENU_TYPES = DeferredRegister.create(ForgeRegistries.MENU_TYPES, MODID);
+    public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
+            DeferredRegister.create(ForgeRegistries.BLOCK_ENTITY_TYPES, MODID);
+    public static final DeferredRegister<MenuType<?>> MENU_TYPES =
+            DeferredRegister.create(ForgeRegistries.MENU_TYPES, MODID);
 
     // ───────────── ブロックエンティティ ─────────────
-    public static final RegistryObject<BlockEntityType<ArcaneCraftingTableBlockEntity>> ARCANE_CRAFTING_TABLE_BE = BLOCK_ENTITIES.register("fusion_table", () ->
-            BlockEntityType.Builder.of(ArcaneCraftingTableBlockEntity::new, ModBlocks.ARCANE_CRAFTING_TABLE.get()).build(null));
+    public static final RegistryObject<BlockEntityType<ArcaneCraftingTableBlockEntity>> ARCANE_CRAFTING_TABLE_BE =
+            BLOCK_ENTITIES.register("fusion_table", () ->
+                    BlockEntityType.Builder.of(ArcaneCraftingTableBlockEntity::new, ModBlocks.ARCANE_CRAFTING_TABLE.get()).build(null));
 
-    public static final RegistryObject<MenuType<ArcaneCraftingMenu>> ARCANE_CRAFTING_MENU = MENU_TYPES.register("fusion_table", () ->
-            IForgeMenuType.create(ArcaneCraftingMenu::new));
+    public static final RegistryObject<MenuType<ArcaneCraftingMenu>> ARCANE_CRAFTING_MENU =
+            MENU_TYPES.register("fusion_table", () ->
+                    IForgeMenuType.create(ArcaneCraftingMenu::new));
 
     // ───────────── コンストラクタ ─────────────
     public More_iss() {
@@ -68,11 +73,13 @@ public class More_iss {
         ModEntities.register(modEventBus);
         CreativeTabRegistry.register(modEventBus);
         ModItems.register(modEventBus);
+        ModSounds.SOUNDS.register(modEventBus);
+
+        // ★ パーティクルタイプを登録
+        ModParticles.PARTICLES.register(modEventBus);
 
         BLOCK_ENTITIES.register(modEventBus);
         MENU_TYPES.register(modEventBus);
-
-        // ModMenus の MENU_TYPES を登録
         ModMenus.MENU_TYPES.register(modEventBus);
 
         // イベントリスナー
@@ -83,11 +90,15 @@ public class More_iss {
         modEventBus.addListener(this::registerLayerDefinitions);
         modEventBus.addListener(this::registerAttributes);
 
+        // ★ ModParticleFactories は @Mod.EventBusSubscriber で自動登録されるため、
+        // ここでの addListener は不要（削除）
+
         DisintegrationState.init();
         DisintegrationTargetManager.init();
 
-        // ⭐ イベントハンドラを登録
+        // イベントハンドラ登録
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new ManaConversionHandler());
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new ManaFurnaceHandler());
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new FrostArmorDamageEventHandler());
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new ThunderResonanceHandler());
 
@@ -103,21 +114,25 @@ public class More_iss {
     // ───────────── レシピ登録 ─────────────
     private void registerRecipes(net.minecraftforge.registries.RegisterEvent event) {
         if (event.getRegistryKey().equals(Registries.RECIPE_TYPE)) {
-            event.register(Registries.RECIPE_TYPE, new ResourceLocation(MODID, "arcane_crafting"), () -> ArcaneCraftingRecipeType.INSTANCE);
+            event.register(Registries.RECIPE_TYPE,
+                    new ResourceLocation(MODID, "arcane_crafting"),
+                    () -> ArcaneCraftingRecipeType.INSTANCE);
         }
         if (event.getRegistryKey().equals(Registries.RECIPE_SERIALIZER)) {
-            event.register(Registries.RECIPE_SERIALIZER, new ResourceLocation(MODID, "arcane_crafting"), () -> ArcaneCraftingRecipeSerializer.INSTANCE);
+            event.register(Registries.RECIPE_SERIALIZER,
+                    new ResourceLocation(MODID, "arcane_crafting"),
+                    () -> ArcaneCraftingRecipeSerializer.INSTANCE);
         }
     }
 
     // ───────────── クライアントセットアップ ─────────────
     private void clientSetup(FMLClientSetupEvent event) {
         event.enqueueWork(() -> {
-            System.out.println("[DEBUG] Registering screens...");
+            // 画面登録のみ（パーティクル登録は ModParticleFactories に委譲）
             MenuScreens.register(ARCANE_CRAFTING_MENU.get(), ArcaneCraftingScreen::new);
             MenuScreens.register(ModMenus.RING_OF_MANA_CONVERSION.get(), RingOfManaConversionScreen::new);
             MenuScreens.register(ModMenus.RING_OF_THUNDER_RESONANCE.get(), RingOfThunderResonanceScreen::new);
-            System.out.println("[DEBUG] Screens registered!");
+            MenuScreens.register(ModMenus.MANA_FURNACE.get(), ManaFurnaceScreen::new);
         });
     }
 
@@ -142,7 +157,7 @@ public class More_iss {
         event.registerLayerDefinition(GlacialExecution.LAYER_LOCATION, GlacialExecution::createBodyLayer);
     }
 
-    // 属性登録
+    // ───────────── 属性登録 ─────────────
     private void registerAttributes(EntityAttributeCreationEvent event) {
         event.put(ModEntities.ETERNAL_WIZARD.get(), EternalWizardEntity.prepareAttributes().build());
         event.put(ModEntities.LITTLE_MONOLITH.get(), LittleMonolithEntity.createAttributes().build());

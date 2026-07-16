@@ -2,7 +2,9 @@ package nekotori_haru.more_iss.registry;
 
 import nekotori_haru.more_iss.More_iss;
 import nekotori_haru.more_iss.item.RingOfManaConversionItem;
+import nekotori_haru.more_iss.item.RingOfManaFurnaceItem;
 import nekotori_haru.more_iss.item.RingOfThunderResonanceItem;
+import nekotori_haru.more_iss.menu.ManaFurnaceContainer;
 import nekotori_haru.more_iss.menu.RingOfManaConversionContainer;
 import nekotori_haru.more_iss.menu.RingOfThunderResonanceContainer;
 import net.minecraft.world.inventory.MenuType;
@@ -24,6 +26,14 @@ public class ModMenus {
                         ItemStack ringStack = data.readItem();
                         ItemStackHandler handler = RingOfManaConversionItem.getInventory(ringStack);
                         return new RingOfManaConversionContainer(windowId, inv, handler, ringStack);
+                    }));
+
+    public static final RegistryObject<MenuType<ManaFurnaceContainer>> MANA_FURNACE =
+            MENU_TYPES.register("mana_furnace",
+                    () -> IForgeMenuType.create((windowId, inv, data) -> {
+                        ItemStack ringStack = data.readItem();
+                        ItemStackHandler handler = RingOfManaFurnaceItem.getInventory(ringStack);
+                        return new ManaFurnaceContainer(windowId, inv, handler, ringStack);
                     }));
 
     public static final RegistryObject<MenuType<RingOfThunderResonanceContainer>> RING_OF_THUNDER_RESONANCE = MENU_TYPES.register("ring_of_thunder_resonance",

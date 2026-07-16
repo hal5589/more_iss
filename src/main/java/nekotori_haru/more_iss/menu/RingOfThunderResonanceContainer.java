@@ -10,7 +10,6 @@ import net.minecraftforge.items.ItemStackHandler;
 public class RingOfThunderResonanceContainer extends BaseRingContainer {
 
     public RingOfThunderResonanceContainer(int id, Inventory playerInv, ItemStackHandler handler, ItemStack ringStack) {
-        // ★ スロット数1、位置(80,35)
         super(ModMenus.RING_OF_THUNDER_RESONANCE.get(), id, playerInv, handler, ringStack,
                 1, 80, 35, 1);
     }
@@ -22,8 +21,18 @@ public class RingOfThunderResonanceContainer extends BaseRingContainer {
 
     @Override
     protected int getMaxStackSizePerSlot() {
-        // ★ 最大スタック数は4（これが「最大回路数4」の意味）
         return RingOfThunderResonanceItem.MAX_STACK_PER_SLOT;
+    }
+
+    // ★ プレイヤーインベントリを -1px ずらす
+    @Override
+    protected int getPlayerInventoryXOffset() {
+        return -1;
+    }
+
+    @Override
+    protected int getPlayerInventoryYOffset() {
+        return -1;
     }
 
     @Override

@@ -46,17 +46,34 @@ public abstract class BaseRingContainer extends AbstractContainerMenu {
             });
         }
 
+        // ★ プレイヤーインベントリのオフセットを取得
+        int xOff = getPlayerInventoryXOffset();
+        int yOff = getPlayerInventoryYOffset();
+
         // プレイヤーインベントリ（27スロット）
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
-                this.addSlot(new Slot(playerInv, 9 + row * 9 + col, 8 + col * 18, 84 + row * 18));
+                this.addSlot(new Slot(playerInv, 9 + row * 9 + col,
+                        8 + col * 18 + xOff,
+                        84 + row * 18 + yOff));
             }
         }
 
         // プレイヤーホットバー（9スロット）
         for (int col = 0; col < 9; col++) {
-            this.addSlot(new Slot(playerInv, col, 8 + col * 18, 142));
+            this.addSlot(new Slot(playerInv, col,
+                    8 + col * 18 + xOff,
+                    142 + yOff));
         }
+    }
+
+    // ★ サブクラスでオーバーライドしてプレイヤーインベントリの位置を微調整
+    protected int getPlayerInventoryXOffset() {
+        return 0;
+    }
+
+    protected int getPlayerInventoryYOffset() {
+        return 0;
     }
 
     // サブクラスでオーバーライドしてアイテム制限を設定
@@ -109,6 +126,5 @@ public abstract class BaseRingContainer extends AbstractContainerMenu {
         saveInventory();
     }
 
-    // サブクラスでオーバーライドして保存処理を実装
     protected abstract void saveInventory();
 }

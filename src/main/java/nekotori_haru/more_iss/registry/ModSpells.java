@@ -11,6 +11,7 @@ import nekotori_haru.more_iss.spell.nature.*;
 import nekotori_haru.more_iss.spell.holy.*;
 import nekotori_haru.more_iss.spell.ender.*;
 import nekotori_haru.more_iss.spell.evocation.*;
+import nekotori_haru.more_iss.spell.nature.yaezakura.YaezakuraSpell;
 import nekotori_haru.more_iss.spell.synthesis.*;
 import nekotori_haru.more_iss.spell.eldritch.*;
 import nekotori_haru.more_iss.spell.lightning.*;
@@ -48,6 +49,7 @@ public class ModSpells {
     public static final RegistryObject<AbstractSpell> SOLAR_RAY = SPELLS.register("solar_ray", SolarRaySpell::new);
     public static final RegistryObject<AbstractSpell> UNFADING = SPELLS.register("unfading", UnfadingSpell::new);
     public static final RegistryObject<AbstractSpell> SUMMON_APOTHECARIST = SPELLS.register("summon_apothecarist", SummonApothecaristSpell::new);
+    public static final RegistryObject<AbstractSpell> YAEZAKURA = SPELLS.register("yaezakura", YaezakuraSpell::new);
 
 
     // 聖系統

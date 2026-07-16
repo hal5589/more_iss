@@ -5,6 +5,7 @@ import io.redspace.ironsspellbooks.util.ItemPropertiesHelper;
 import nekotori_haru.more_iss.More_iss;
 import nekotori_haru.more_iss.item.RingOfManaConversionItem;
 import nekotori_haru.more_iss.item.RingOfManaCycleItem;
+import nekotori_haru.more_iss.item.RingOfManaFurnaceItem;
 import nekotori_haru.more_iss.item.RingOfThunderResonanceItem;
 import nekotori_haru.more_iss.item.SpellbookOfConcentration;
 import nekotori_haru.more_iss.item.armor.EternalArmorItem;
@@ -84,10 +85,13 @@ public class ModItems {
                     new Item.Properties().stacksTo(1).fireResistant()));
 
     public static final RegistryObject<Item> RING_OF_MANA_CONVERSION = ITEMS.register("ring_of_mana_conversion",
-            () -> new RingOfManaConversionItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+            () -> new RingOfManaConversionItem(new Item.Properties().stacksTo(1).rarity(Rarity.RARE)));
+
+    public static final RegistryObject<Item> RING_OF_MANA_FURNACE = ITEMS.register("ring_of_mana_furnace",
+            () -> new RingOfManaFurnaceItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).fireResistant()));
 
     public static final RegistryObject<Item> RING_OF_THUNDER_RESONANCE = ITEMS.register("ring_of_thunder_resonance",
-            () -> new RingOfThunderResonanceItem(new Item.Properties().stacksTo(1)));
+            () -> new RingOfThunderResonanceItem(new Item.Properties().stacksTo(1).rarity(Rarity.RARE)));
 
     public static void register(IEventBus bus) {
         ITEMS.register(bus);

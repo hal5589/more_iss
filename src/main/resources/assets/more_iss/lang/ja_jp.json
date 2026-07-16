@@ -205,6 +205,16 @@
   "item.more_iss.ring_of_thunder_resonance.desc": "帯電バフを回路数分増幅する指輪",
   "item.more_iss.ring_of_thunder_resonance.circuits": "回路数: %d",
 
+  "item.more_iss.ring_of_mana_furnace": "魔力炉の指輪",
+  "item.more_iss.ring_of_mana_furnace.desc": "マナを蓄積し、起動時に蓄積されたマナを爆発的な力に変換する指輪",
+  "item.more_iss.ring_of_mana_furnace.charge": "蓄積: %d / %d",
+  "item.more_iss.ring_of_mana_furnace.circuits": "回路数: %d",
+  "item.more_iss.ring_of_mana_furnace.status_on": "§a● 起動中",
+  "item.more_iss.ring_of_mana_furnace.status_off": "§8● 停止中",
+  "item.more_iss.ring_of_mana_furnace.ready": "§e◆ 解放準備完了！",
+  "item.more_iss.ring_of_mana_furnace.activated": "§a魔力炉を起動しました",
+  "item.more_iss.ring_of_mana_furnace.deactivated": "§c魔力炉を停止しました",
+
   "death.attack.more_iss.synthesis_magic": "%1$sは融合魔法によって虹の光に飲まれた"
 }
 

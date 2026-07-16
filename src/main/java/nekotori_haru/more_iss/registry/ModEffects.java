@@ -52,6 +52,10 @@ public class ModEffects {
     public static final RegistryObject<MobEffect> OBLIVION =
             MOB_EFFECTS.register("oblivion", OblivionEffect::new);
 
+    // 魔力炉バフ（SPELL_POWER +400%）の登録
+    public static final RegistryObject<MobEffect> MANA_FURNACE_POWER =
+            MOB_EFFECTS.register("mana_furnace_power", ManaFurnaceEffect::new);
+
     public static void register(IEventBus eventBus) {
         MOB_EFFECTS.register(eventBus);
     }

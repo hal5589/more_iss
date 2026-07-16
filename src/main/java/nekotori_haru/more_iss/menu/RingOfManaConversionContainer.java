@@ -24,6 +24,17 @@ public class RingOfManaConversionContainer extends BaseRingContainer {
         return RingOfManaConversionItem.MAX_STACK_PER_SLOT;
     }
 
+    // ★ プレイヤーインベントリを -1px ずらす
+    @Override
+    protected int getPlayerInventoryXOffset() {
+        return -1;
+    }
+
+    @Override
+    protected int getPlayerInventoryYOffset() {
+        return -1;
+    }
+
     @Override
     protected void saveInventory() {
         RingOfManaConversionItem.saveInventory(ringStack, inventory);

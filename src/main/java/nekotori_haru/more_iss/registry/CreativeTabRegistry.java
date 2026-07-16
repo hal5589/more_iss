@@ -4,7 +4,6 @@ import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
 import io.redspace.ironsspellbooks.api.spells.ISpellContainer;
 import io.redspace.ironsspellbooks.registries.ItemRegistry;
 import nekotori_haru.more_iss.More_iss;
-import nekotori_haru.more_iss.spell.synthesis.PolychromaticLanceSpell;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
@@ -41,7 +40,6 @@ public class CreativeTabRegistry {
                 //アプグレ
                 output.accept(ModItems.SYNTHESIS_UPGRADE_ORB.get());
 
-
                 //火
                 addSpellScroll(output, ModSpells.FLAME_RAY.get());
                 addSpellScroll(output, ModSpells.MARK_OF_DETONATION.get());
@@ -49,21 +47,24 @@ public class CreativeTabRegistry {
                 addSpellScroll(output, ModSpells.PHOENIX_BLESSING.get());
                 addSpellScroll(output, ModSpells.METEOR_FALL.get());
                 addSpellScroll(output, ModSpells.SUMMON_PYROMANCER.get());
+                addSpellScroll(output, ModSpells.INFERNO_STEP.get()); // ★ 追加
 
                 //氷
                 addSpellScroll(output, ModSpells.FROST_ARMOR.get());
                 addSpellScroll(output, ModSpells.GLACIAL_EXECUTION.get());
                 addSpellScroll(output, ModSpells.ABSOLUTE_ZERO.get());
-                addSpellScroll(output, ModSpells.SUMMON_CRYOMANCER.get());
-                addSpellScroll(output, ModSpells.SUMMON_CRYOMANCER.get());
+                addSpellScroll(output, ModSpells.SUMMON_CRYOMANCER.get()); // 重複を削除（元は2回）
+                addSpellScroll(output, ModSpells.CRYO_CONVERGENCE.get());   // ★ 追加（重複していた行をこちらに置き換え）
 
                 //雷
                 addSpellScroll(output, ModSpells.RAISEN.get());
+                addSpellScroll(output, ModSpells.PLASMA_STEP.get()); // ★ 追加
 
                 //自然
                 addSpellScroll(output, ModSpells.SOLAR_RAY.get());
                 addSpellScroll(output, ModSpells.UNFADING.get());
                 addSpellScroll(output, ModSpells.SUMMON_APOTHECARIST.get());
+                addSpellScroll(output, ModSpells.YAEZAKURA.get()); // ★ 追加
 
                 //聖
                 addSpellScroll(output, ModSpells.HOLY_RAY.get());
@@ -82,6 +83,7 @@ public class CreativeTabRegistry {
 
                 //エルドリッチ
                 addSpellScroll(output, ModSpells.SOUL_LINK.get());
+                addSpellScroll(output, ModSpells.OBLIVION.get()); // ★ 追加
 
                 //融合
                 addSpellScroll(output, ModSpells.OVERBURST_BLOOD.get());
@@ -91,6 +93,9 @@ public class CreativeTabRegistry {
                 addSpellScroll(output, ModSpells.POLYCHROMATIC_LANCE.get());
                 addSpellScroll(output, ModSpells.POLYCHROMATIC_BEAM.get());
                 addSpellScroll(output, ModSpells.SUMMON_WIZARDS.get());
+                addSpellScroll(output, ModSpells.STARLIGHT.get());              // ★ 追加
+                addSpellScroll(output, ModSpells.SEVEN_COLORED_CAGE.get());     // ★ 追加
+                addSpellScroll(output, ModSpells.LITTLE_MONOLITH.get());        // ★ 追加
             })
             .build());
 
